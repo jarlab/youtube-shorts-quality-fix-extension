@@ -52,6 +52,13 @@ This writes three files:
 - `out/launch-720p.mp4`: a 720p, 30 fps cut under GitHub's 10 MB upload limit.
 - `out/poster.png`: a poster frame from the call to action.
 
+The repository keeps copies of the 720p cut and the poster, as [`docs/launch-video.mp4`](../docs/launch-video.mp4) and [`docs/launch-video-poster.jpg`](../docs/launch-video-poster.jpg). After a new render, refresh them:
+
+```sh
+cp out/launch-720p.mp4 ../docs/launch-video.mp4
+sips -s format jpeg -s formatOptions 88 out/poster.png --out ../docs/launch-video-poster.jpg
+```
+
 A full render takes about four minutes on an Apple M3 Pro. `render.mjs` compiles `encode.swift` on first use, and `--workers` sets how many Chrome windows render frames in parallel.
 
 For review, `node render.mjs --stills 3.5,7.5` writes PNG frames to `out/stills/`, and `--from 17 --to 25` renders part of the timeline without sound.
