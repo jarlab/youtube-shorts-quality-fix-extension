@@ -1,0 +1,13 @@
+{
+  "name": "youtube-auto-hd-launch-video",
+  "private": true,
+  "description": "Launch video for YouTube Auto HD, rendered from code",
+  "scripts": {
+    "voiceover": "node voiceover.mjs",
+    "soundtrack": "node soundtrack.mjs",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "kokoro-js": "^1.2.1"
+  }
+}

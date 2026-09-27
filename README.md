@@ -57,5 +57,6 @@ The tests cover selection, fallback, recovery, exclusions, retries, manual overr
 - [Specification](docs/spec.md)
 - `content.js`: quality policy, verification, and YouTube integration
 - `manifest.json`: extension metadata and site scope
+- [`launch-video/`](launch-video/README.md): 45-second launch video, rendered from code
 
 Installing the extension is a separate step from building and testing its source.

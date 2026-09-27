@@ -1,0 +1,1531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Auto HD — launch video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600..700&family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400..800&display=block">
+<style>
+  :root {
+    --ink: #f5f3ff;
+    --ink-2: #bcbbe8;
+    --ink-3: #8583b8;
+    --midnight: #0a0f2e;
+    --purple: #7c4dff;
+    --gold: #ffd166;
+    --orange: #ff9a3d;
+    --red: #ff6b4a;
+    --cyan: #5ce1ff;
+    --mint: #7ff3d0;
+    --display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --body: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; height: 100%; background: #04061a; overflow: hidden; }
+  #viewport { position: absolute; inset: 0; display: grid; place-items: center; }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--midnight); color: var(--ink); font-family: var(--body);
+    transform-origin: 0 0; -webkit-font-smoothing: antialiased;
+  }
+  canvas.full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  #fx { pointer-events: none; }
+  .layer { position: absolute; inset: 0; }
+  .abs { position: absolute; }
+  .display { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; margin: 0; }
+  .w { display: inline-block; overflow: hidden; vertical-align: top; padding: 0.04em 0.02em 0.12em; margin: -0.04em -0.02em -0.12em; }
+  .wi { display: inline-block; }
+  .gold { background: linear-gradient(90deg, #ffe08a, #ff9a3d); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cyan { background: linear-gradient(90deg, #5ce1ff, #b69cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .muted { color: var(--ink-2); font-family: var(--body); font-weight: 500; margin: 0; letter-spacing: -0.01em; }
+
+  /* Scene 1 */
+  .stat-line { left: 160px; font-size: 84px; display: flex; align-items: center; gap: 26px; white-space: nowrap; }
+  .stat-line svg { width: 66px; height: 66px; flex: none; }
+  #s1l1 { top: 280px; }
+  #s1l2 { top: 392px; }
+  #s1l3 { left: 152px; top: 520px; font-size: 178px; color: var(--red); filter: drop-shadow(0 0 36px rgba(255, 107, 74, 0.45)); white-space: nowrap; }
+  #s1note { left: 640px; top: 846px; font: 700 58px/1 'Caveat', cursive; color: var(--gold); transform-origin: left center; white-space: nowrap; }
+  #s1arrow { left: 1020px; top: 560px; width: 180px; height: 300px; overflow: visible; }
+
+  /* Wizard */
+  #wizard { position: absolute; left: 0; top: 0; width: 380px; height: 380px; transform-origin: 50% 50%; }
+  #wizard img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45)); }
+  #wizardGlow { position: absolute; inset: -45%; border-radius: 50%; background: radial-gradient(closest-side, rgba(146, 96, 255, 0.55), rgba(92, 225, 255, 0.12) 60%, transparent); }
+
+  /* Scene 2 */
+  #s2h { left: 100px; width: 1000px; top: 598px; font-size: 112px; text-align: center; white-space: nowrap; }
+  #s2p { left: 100px; width: 1000px; top: 738px; font-size: 42px; text-align: center; }
+
+  /* Scene 3 */
+  #wordmark { top: 0; left: 0; font-size: 132px; white-space: nowrap; }
+  #s3p { font-size: 44px; white-space: nowrap; }
+
+  /* Scene 4 */
+  #menu {
+    left: 170px; top: 236px; width: 450px; padding: 22px 0 18px; border-radius: 28px;
+    background: rgba(20, 22, 44, 0.92); border: 1.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5); font-size: 32px; transform-origin: 50% 50%;
+  }
+  #menu .head { display: flex; align-items: center; gap: 16px; padding: 4px 34px 20px; font-weight: 600; border-bottom: 1.5px solid rgba(255, 255, 255, 0.1); margin-bottom: 10px; }
+  #menu .item { position: relative; display: flex; align-items: center; height: 64px; padding: 0 34px 0 84px; color: #e9e8fb; }
+  #menu .item .tick { position: absolute; left: 34px; width: 30px; height: 30px; }
+  #menu .item .badge { margin-left: 12px; font: 700 18px var(--body); padding: 3px 7px; border-radius: 6px; background: #ff3d57; color: white; }
+  #menu .item.dim { color: #9d9cc4; }
+  #menu .item .hover { position: absolute; inset: 0 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.1); opacity: 0; }
+  #cursor { left: 0; top: 0; width: 54px; height: 54px; transform-origin: 8px 6px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5)); }
+  #s4h { left: 760px; top: 272px; font-size: 104px; white-space: nowrap; }
+  #chips { left: 760px; top: 548px; display: grid; grid-template-columns: repeat(2, 330px); gap: 18px 20px; }
+  .chip { display: flex; align-items: center; gap: 14px; height: 76px; padding: 0 26px; border-radius: 999px; font: 600 34px var(--body); background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.13); white-space: nowrap; }
+  .chip svg { width: 34px; height: 34px; flex: none; }
+  #s4p { left: 760px; top: 770px; font-size: 48px; color: var(--ink); font-weight: 600; }
+
+  /* Player */
+  #player { left: 1216px; top: 92px; width: 504px; height: 896px; transform-origin: 50% 50%; }
+  #screen { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; background: #000; box-shadow: 0 50px 110px rgba(0, 0, 0, 0.55), 0 0 0 1.5px rgba(255, 255, 255, 0.1); }
+  #shortCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #feedTrack { position: absolute; left: 0; top: 0; width: 100%; }
+  .short-ui { position: relative; width: 504px; height: 896px; color: white; font-family: var(--body); }
+  .short-ui .scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.55)); }
+  .short-ui .rail { position: absolute; right: 12px; bottom: 116px; display: flex; flex-direction: column; align-items: center; gap: 22px; font: 600 14px var(--body); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+  .short-ui .rail div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .short-ui .rail svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)); }
+  .short-ui .meta { position: absolute; left: 18px; right: 84px; bottom: 30px; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+  .short-ui .who { display: flex; align-items: center; gap: 10px; font: 600 17px var(--body); margin-bottom: 10px; }
+  .short-ui .avatar { width: 34px; height: 34px; border-radius: 50%; }
+  .short-ui .cap { font: 500 16px/1.35 var(--body); opacity: 0.92; }
+  .short-ui .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.25); }
+  .short-ui .progress i { display: block; height: 100%; width: 0; background: rgba(255, 255, 255, 0.95); }
+  #stats {
+    position: absolute; left: 14px; top: 14px; width: 448px; padding: 12px 16px 12px; box-sizing: border-box;
+    background: rgba(6, 8, 18, 0.86); border-radius: 12px; font: 500 15px/1.6 var(--mono); color: #eceaf8;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+  #stats .hdr { display: flex; justify-content: space-between; font: 600 14px var(--body); color: #aeb1d8; margin-bottom: 6px; }
+  #stats .row { position: relative; display: grid; grid-template-columns: 208px 1fr; padding: 1px 8px; margin: 1px -8px; border-radius: 7px; }
+  #stats .row .k { color: #9da2cb; }
+  #stats .row .hl { position: absolute; inset: 0; border-radius: 7px; opacity: 0; }
+  #stats .row span { position: relative; }
+  #flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #fff, rgba(210, 240, 255, 0.85) 45%, rgba(160, 120, 255, 0.4)); opacity: 0; }
+  #sticker {
+    position: absolute; right: -42px; top: -34px; display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px 12px 18px; border-radius: 22px; font: 800 46px/1 var(--mono); color: #0d1024;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.14); transform-origin: 70% 60%; white-space: nowrap;
+  }
+  #sticker .hd { font: 800 20px/1 var(--body); padding: 5px 7px; border-radius: 7px; background: #0d1024; color: var(--cyan); display: none; }
+  #sticker .sub { font: 700 18px/1.1 var(--body); display: none; max-width: 120px; white-space: normal; }
+
+  /* Scene 5 */
+  #s5h { left: 160px; top: 176px; font-size: 96px; white-space: nowrap; }
+  #s5p { left: 160px; top: 408px; font-size: 38px; }
+  #log {
+    left: 160px; top: 500px; width: 900px; padding: 20px 30px; box-sizing: border-box; border-radius: 28px;
+    background: rgba(255, 255, 255, 0.04); border: 1.5px solid rgba(255, 255, 255, 0.09);
+  }
+  #log .title { font: 600 22px var(--mono); color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 0 10px; }
+  #log .row { display: grid; grid-template-columns: 52px 300px 250px 1fr; align-items: center; height: 76px; border-top: 1.5px solid rgba(255, 255, 255, 0.07); }
+  #log .row svg { width: 36px; height: 36px; }
+  #log .name { font: 600 32px var(--body); }
+  #log .dims { font: 500 30px var(--mono); color: var(--ink-2); }
+  #log .pill { justify-self: start; display: flex; align-items: center; gap: 12px; font: 800 28px var(--mono); }
+  #log .pill b { padding: 6px 12px; border-radius: 10px; color: #0d1024; background: var(--cyan); }
+  #log .pill b.ok { background: var(--gold); }
+  #log .pill em { font: 600 20px var(--body); font-style: normal; color: var(--gold); line-height: 1.1; }
+
+  /* Scene 6 */
+  #s6h { left: 160px; top: 112px; font-size: 96px; white-space: nowrap; }
+  #s6p { left: 160px; top: 232px; font-size: 38px; }
+  #chart { left: 160px; top: 336px; width: 1600px; height: 640px; border-radius: 34px; background: rgba(255, 255, 255, 0.04); border: 1.5px solid rgba(255, 255, 255, 0.09); box-sizing: border-box; }
+  #chartSvg { position: absolute; left: 0; top: 0; overflow: visible; }
+  .note-pill { position: absolute; display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 14px; font: 700 24px var(--body); white-space: nowrap; transform-origin: 0 50%; }
+  .note-pill svg { width: 24px; height: 24px; }
+  .np-orange { background: rgba(255, 107, 74, 0.16); color: #ffa08c; border: 1.5px solid rgba(255, 107, 74, 0.5); }
+  .np-gold { background: rgba(255, 209, 102, 0.14); color: var(--gold); border: 1.5px solid rgba(255, 209, 102, 0.5); }
+  .np-cyan { background: rgba(92, 225, 255, 0.12); color: var(--cyan); border: 1.5px solid rgba(92, 225, 255, 0.45); }
+  #wifi { position: absolute; right: 36px; top: 26px; display: flex; align-items: center; gap: 12px; font: 600 24px var(--body); color: var(--ink-2); }
+  #wifi svg { width: 44px; height: 44px; }
+  #footnote { position: absolute; left: 150px; bottom: 22px; font: 500 24px var(--body); color: var(--ink-3); }
+
+  /* Scene 7 */
+  #s7h { left: 0; width: 1920px; top: 150px; font-size: 96px; text-align: center; white-space: nowrap; }
+  .card { position: absolute; top: 330px; width: 506px; height: 420px; padding: 46px 44px; box-sizing: border-box; border-radius: 34px; background: rgba(255, 255, 255, 0.045); border: 1.5px solid rgba(255, 255, 255, 0.1); }
+  .card .icon { width: 88px; height: 88px; border-radius: 24px; display: grid; place-items: center; margin-bottom: 34px; }
+  .card .icon svg { width: 48px; height: 48px; }
+  .card h3 { font: 800 44px/1.05 var(--display); letter-spacing: -0.02em; margin: 0 0 18px; }
+  .card p { font: 500 29px/1.38 var(--body); color: var(--ink-2); margin: 0; }
+  #c1 { left: 160px; } #c2 { left: 707px; } #c3 { left: 1254px; }
+  #manifest { top: 812px; left: 0; width: 1920px; display: flex; justify-content: center; }
+  #manifest > div { display: flex; align-items: center; gap: 22px; padding: 18px 30px; border-radius: 20px; background: rgba(5, 8, 24, 0.7); border: 1.5px solid rgba(255, 255, 255, 0.1); font: 500 30px var(--mono); }
+  #manifest .file { color: var(--ink-3); font: 600 24px var(--body); }
+  #manifest .k { color: #c792ea; } #manifest .s { color: #c3e88d; } #manifest .p { color: #89ddff; }
+
+  /* Scene 8 */
+  #s8h { left: 0; width: 1920px; top: 540px; font-size: 128px; text-align: center; white-space: nowrap; }
+  #s8p { left: 0; width: 1920px; top: 700px; font-size: 60px; text-align: center; font-weight: 700; margin: 0; font-family: var(--display); letter-spacing: -0.01em; }
+  #s8pills { left: 0; width: 1920px; top: 846px; display: flex; justify-content: center; gap: 22px; }
+  #s8pills > div { display: flex; align-items: center; gap: 14px; height: 72px; padding: 0 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.12); font: 600 30px var(--body); white-space: nowrap; }
+  #s8pills .url { font: 500 29px var(--mono); color: var(--ink); }
+  #s8pills svg { width: 32px; height: 32px; }
+  #fade { position: absolute; inset: 0; background: #04061a; opacity: 0; pointer-events: none; }
+
+  /* Preview controls (not part of the video) */
+  #controls[hidden] { display: none; }
+  #controls { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 14px; background: rgba(20, 22, 44, 0.92); color: #eee; font: 500 14px var(--body); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); z-index: 10; }
+  #controls button { font: 600 14px var(--body); background: #7c4dff; color: white; border: 0; border-radius: 8px; padding: 7px 14px; cursor: pointer; min-width: 74px; }
+  #controls input[type=range] { width: min(60vw, 640px); accent-color: #7c4dff; }
+  #controls .time { font-family: var(--mono); min-width: 110px; text-align: right; }
+  #controls label { display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<div id="viewport">
+<div id="stage">
+  <canvas id="bg" class="full" width="1920" height="1080"></canvas>
+
+  <!-- 1. The problem -->
+  <div id="s1" class="layer">
+    <div id="s1l1" class="stat-line abs display"><svg data-icon="check"></svg><span data-words="45 Mbps connection."></span></div>
+    <div id="s1l2" class="stat-line abs display"><svg data-icon="check"></svg><span data-words="36 seconds buffered."></span></div>
+    <div id="s1l3" class="abs display" data-words="Still 240p."></div>
+    <svg id="s1arrow" class="abs" viewBox="0 0 180 300"><path id="s1arrowPath" d="M 70 268 C 118 236, 150 160, 146 62" fill="none" stroke="#ffd166" stroke-width="6" stroke-linecap="round"/><path id="s1arrowHead" d="M 124 84 L 146 56 L 166 86" fill="none" stroke="#ffd166" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div id="s1note" class="abs">can you read that code?</div>
+  </div>
+
+  <!-- 2. The fix -->
+  <div id="s2" class="layer">
+    <h2 id="s2h" class="abs display" data-words="Now it’s *cyan:1080p.*"></h2>
+    <p id="s2p" class="abs muted" data-words="Same Short, same second. No reload."></p>
+  </div>
+
+  <!-- 3. Title -->
+  <div id="s3" class="layer">
+    <h1 id="wordmark" class="abs display" data-words="YouTube *gold:Auto HD*"></h1>
+    <p id="s3p" class="abs muted" data-words="Automatic 1080p for YouTube Shorts and videos."></p>
+  </div>
+
+  <!-- 4. The chore it removes -->
+  <div id="s4" class="layer">
+    <div id="menu" class="abs">
+      <div class="head"><svg data-icon="chevron" style="width:30px;height:30px"></svg>Quality</div>
+      <div class="item"><i class="hover"></i>1080p<span class="badge">HD</span></div>
+      <div class="item"><i class="hover"></i>720p</div>
+      <div class="item"><i class="hover"></i>480p</div>
+      <div class="item"><i class="hover"></i>360p</div>
+      <div class="item"><i class="hover"></i>240p</div>
+      <div class="item"><i class="hover"></i>144p</div>
+      <div class="item dim"><i class="hover"></i><svg class="tick" data-icon="tick"></svg>Auto (240p)</div>
+    </div>
+    <svg id="cursor" class="abs" viewBox="0 0 54 54"><path d="M8 5 L8 44 L18 34 L25 50 L32 47 L25 31 L39 31 Z" fill="#fff" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>
+    <h2 id="s4h" class="abs display" data-words="Never dig through|this menu *gold:again.*"></h2>
+    <div id="chips" class="abs">
+      <div class="chip"><svg data-icon="nope"></svg>No button</div>
+      <div class="chip"><svg data-icon="nope"></svg>No popup</div>
+      <div class="chip"><svg data-icon="nope"></svg>No settings</div>
+      <div class="chip"><svg data-icon="nope"></svg>No account</div>
+    </div>
+    <p id="s4p" class="abs muted" data-words="Install once. Watch in HD."></p>
+  </div>
+
+  <!-- 5. Feed copy -->
+  <div id="s5" class="layer">
+    <h2 id="s5h" class="abs display" data-words="Follows every Short|you *cyan:scroll.*"></h2>
+    <p id="s5p" class="abs muted" data-words="Checks the decoded pixels, not just the label."></p>
+    <div id="log" class="abs">
+      <div class="title">Delivered resolution</div>
+    </div>
+  </div>
+
+  <!-- 6. Adapts to the connection -->
+  <div id="s6" class="layer">
+    <h2 id="s6h" class="abs display" data-words="Bad Wi-Fi? It *gold:adapts.*"></h2>
+    <p id="s6p" class="abs muted" data-words="Repeated buffering drops one level. Smooth playback climbs back to 1080p."></p>
+    <div id="chart" class="abs">
+      <svg id="chartSvg" width="1600" height="640" viewBox="0 0 1600 640"></svg>
+      <div id="wifi"><svg viewBox="0 0 44 44" id="wifiIcon"></svg><span id="wifiLabel">Wi-Fi: strong</span></div>
+      <div id="stall1" class="note-pill np-orange"><svg data-icon="spinner"></svg>stall 1</div>
+      <div id="stall2" class="note-pill np-orange"><svg data-icon="spinner"></svg>stall 2</div>
+      <div id="dropNote" class="note-pill np-orange">2 stalls → one level down</div>
+      <div id="bracketNote" class="note-pill np-cyan">30 s smooth + 15 s buffered</div>
+      <div id="upNote" class="note-pill np-gold"><svg data-icon="spark"></svg>tries 1080p again</div>
+      <div id="footnote">If an upgrade stalls, it steps back and waits 60 s before trying again.</div>
+    </div>
+  </div>
+
+  <!-- 7. Good manners -->
+  <div id="s7" class="layer">
+    <h2 id="s7h" class="abs display" data-words="Good manners, *gold:built in.*"></h2>
+    <div id="c1" class="card"><div class="icon" style="background:rgba(255,209,102,.14)"><svg data-icon="pointer"></svg></div><h3>Your pick wins.</h3><p>Choose a quality yourself and it backs off for that video.</p></div>
+    <div id="c2" class="card"><div class="icon" style="background:rgba(160,120,255,.18)"><svg data-icon="shield"></svg></div><h3>Only real stalls count.</h3><p>Ads, seeking, pausing and background tabs never trigger a downgrade.</p></div>
+    <div id="c3" class="card"><div class="icon" style="background:rgba(92,225,255,.14)"><svg data-icon="lock"></svg></div><h3>Stays in your browser.</h3><p>No analytics, no external requests, no remote code.</p></div>
+    <div id="manifest" class="abs"><div><span class="file">manifest.json</span><span><span class="k">"matches"</span><span class="p">: [</span><span class="s">"https://www.youtube.com/*"</span><span class="p">]</span></span></div></div>
+  </div>
+
+  <!-- 8. Call to action -->
+  <div id="s8" class="layer">
+    <h2 id="s8h" class="abs display" data-words="YouTube *gold:Auto HD*"></h2>
+    <p id="s8p" class="abs" data-words="Sit back. It’s *cyan:1080p.*"></p>
+    <div id="s8pills" class="abs">
+      <div id="pill1"><svg data-icon="puzzle"></svg>Chrome extension · 111+</div>
+      <div id="pill2"><svg data-icon="code"></svg><span class="url">github.com/jarlab/youtube-shorts-quality-fix-extension</span></div>
+    </div>
+  </div>
+
+  <!-- Shared actors -->
+  <div id="player" class="abs">
+    <div id="screen">
+      <canvas id="shortCanvas" width="720" height="1280"></canvas>
+      <div id="feedTrack"></div>
+      <div id="stats">
+        <div class="hdr"><span>Stats for nerds</span><span>✕</span></div>
+        <div class="row" id="rowRes"><i class="hl"></i><span class="k">Current / Optimal Res</span><span class="v" id="resValue">240x426 / 1080x1920</span></div>
+        <div class="row" id="rowNet"><i class="hl"></i><span class="k">Connection Speed</span><span class="v">45000 Kbps</span></div>
+        <div class="row" id="rowBuf"><i class="hl"></i><span class="k">Buffer Health</span><span class="v">36.00 s</span></div>
+      </div>
+      <div id="flash"></div>
+    </div>
+    <div id="sticker"><span class="q" id="stickerQ">240p</span><span class="hd">HD</span><span class="sub">best available</span></div>
+  </div>
+  <div id="wizard"><div id="wizardGlow"></div><img id="wizardImg" src="../icons/icon-source.png" alt=""></div>
+
+  <canvas id="fx" class="full" width="1920" height="1080"></canvas>
+  <div id="fade"></div>
+</div>
+</div>
+<div id="controls" hidden>
+  <button id="play">Play</button>
+  <input id="scrub" type="range" min="0" max="45" step="0.0166667" value="0">
+  <span class="time" id="time">0.00 s</span>
+  <label><input id="sound" type="checkbox" checked> sound</label>
+</div>
+<script src="timeline.js"></script>
+<script>
+'use strict';
+
+// Timeline cues come from timeline.js, shared with the soundtrack generator.
+const { FPS, DURATION, BEAT, T, FEED, SWIPE, CHART } = TIMELINE;
+
+// ---------------------------------------------------------------------------
+// Math
+// ---------------------------------------------------------------------------
+const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  out3: p => 1 - (1 - p) ** 3,
+  out4: p => 1 - (1 - p) ** 4,
+  in2: p => p * p,
+  in3: p => p ** 3,
+  io2: p => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2),
+  io3: p => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2),
+};
+// Damped spring from 0 to 1, evaluated analytically so any frame can be rendered in isolation.
+function spring(dt, k = 170, c = 15) {
+  if (dt <= 0) return 0;
+  const w0 = Math.sqrt(k), z = c / (2 * w0);
+  if (z >= 1) return 1 - Math.exp(-w0 * dt) * (1 + w0 * dt);
+  const wd = w0 * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w0 * dt) * (Math.cos(wd * dt) + (z * w0 / wd) * Math.sin(wd * dt));
+}
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rgba = (c, a) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
+const COLORS = { gold: [255, 209, 102], cyan: [92, 225, 255], purple: [167, 139, 250], white: [255, 255, 255], orange: [255, 154, 61], red: [255, 107, 74] };
+
+// ---------------------------------------------------------------------------
+// DOM helpers
+// ---------------------------------------------------------------------------
+const $ = s => document.querySelector(s);
+function place(el, { x = 0, y = 0, s = 1, sx, sy, r = 0, o = 1, blur = 0 } = {}) {
+  el.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${r.toFixed(3)}deg) scale(${(sx ?? s).toFixed(4)}, ${(sy ?? s).toFixed(4)})`;
+  el.style.opacity = o.toFixed(4);
+  el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : '';
+  el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+}
+function show(el, visible) { el.style.display = visible ? '' : 'none'; }
+function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
+
+// data-words="Now it’s *cyan:1080p.*" → masked word spans; "|" breaks the line.
+function buildWords(el) {
+  const lines = el.dataset.words.split('|');
+  el.textContent = '';
+  lines.forEach((line, li) => {
+    if (li) el.append(document.createElement('br'));
+    line.split(' ').forEach((word, wi) => {
+      if (wi) el.append(' ');
+      const outer = document.createElement('span');
+      outer.className = 'w';
+      const inner = document.createElement('span');
+      inner.className = 'wi';
+      const accent = word.match(/^\*(\w+):(.+)\*$/s);
+      if (accent) { inner.classList.add(accent[1]); inner.textContent = accent[2]; }
+      else inner.textContent = word;
+      outer.append(inner);
+      el.append(outer);
+    });
+  });
+  el._words = [...el.querySelectorAll('.wi')];
+}
+function reveal(el, t, t0, { stagger = 0.07, dur = 0.6, dy = 1.05, ease = E.out4 } = {}) {
+  el._words.forEach((w, i) => {
+    const p = ease(prog(t, t0 + i * stagger, t0 + i * stagger + dur));
+    w.style.transform = `translateY(${((1 - p) * dy * 100).toFixed(2)}%)`;
+    w.style.opacity = clamp(p * 1.6).toFixed(3);
+  });
+}
+// Fade and lift a whole group out.
+const exitOf = (t, t0, dur = 0.4) => E.in2(prog(t, t0, t0 + dur));
+
+const ICONS = {
+  check: '<svg viewBox="0 0 66 66"><circle cx="33" cy="33" r="30" fill="rgba(92,225,255,.14)" stroke="#5ce1ff" stroke-width="3.5"/><path d="M20 34 l9 9 l17 -19" fill="none" stroke="#5ce1ff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ok: '<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#5ce1ff"/><path d="M10.5 18.5 l5 5 l10 -11" fill="none" stroke="#0d1024" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  okGold: '<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#ffd166"/><path d="M10.5 18.5 l5 5 l10 -11" fill="none" stroke="#0d1024" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  tick: '<svg viewBox="0 0 30 30"><path d="M5 15.5 l6.5 6.5 l13.5 -14" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  chevron: '<svg viewBox="0 0 30 30"><path d="M19 5 l-10 10 l10 10" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  nope: '<svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="14" fill="none" stroke="#ffd166" stroke-width="3.2"/><path d="M7.5 26.5 L26.5 7.5" stroke="#ffd166" stroke-width="3.2" stroke-linecap="round"/></svg>',
+  spinner: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="3"/><path d="M12 3 a9 9 0 0 1 9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
+  spark: '<svg viewBox="0 0 24 24"><path d="M12 1 Q12 12 23 12 Q12 12 12 23 Q12 12 1 12 Q12 12 12 1 Z" fill="currentColor"/></svg>',
+  pointer: '<svg viewBox="0 0 48 48"><path d="M13 6 L13 38 L21.5 30 L27.5 43 L33.5 40.5 L27.5 27.5 L39 27.5 Z" fill="#ffd166" stroke="#ffd166" stroke-width="2.5" stroke-linejoin="round"/></svg>',
+  shield: '<svg viewBox="0 0 48 48"><path d="M24 5 L40 11 V23 C40 33 33 40 24 43 C15 40 8 33 8 23 V11 Z" fill="none" stroke="#b69cff" stroke-width="4" stroke-linejoin="round"/><path d="M16.5 24 l5.5 5.5 l10 -11" fill="none" stroke="#b69cff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  lock: '<svg viewBox="0 0 48 48"><rect x="9" y="21" width="30" height="21" rx="5" fill="none" stroke="#5ce1ff" stroke-width="4"/><path d="M16 21 V15 a8 8 0 0 1 16 0 V21" fill="none" stroke="#5ce1ff" stroke-width="4"/><circle cx="24" cy="31" r="3" fill="#5ce1ff"/></svg>',
+  puzzle: '<svg viewBox="0 0 32 32"><path d="M6 10 H11 V8.5 a3 3 0 0 1 6 0 V10 H22 V15 H23.5 a3 3 0 0 1 0 6 H22 V27 H6 Z" fill="none" stroke="#b69cff" stroke-width="2.6" stroke-linejoin="round"/></svg>',
+  code: '<svg viewBox="0 0 32 32"><path d="M11 9 L4 16 L11 23 M21 9 L28 16 L21 23" fill="none" stroke="#ffd166" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  heart: '<svg viewBox="0 0 34 34"><path d="M17 29 C8 22 3 17.5 3 11.5 C3 7.4 6.2 4.5 10 4.5 C12.8 4.5 15.4 6 17 8.6 C18.6 6 21.2 4.5 24 4.5 C27.8 4.5 31 7.4 31 11.5 C31 17.5 26 22 17 29 Z" fill="#fff"/></svg>',
+  comment: '<svg viewBox="0 0 34 34"><path d="M5 7 H29 V24 H13 L7 30 V24 H5 Z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>',
+  share: '<svg viewBox="0 0 34 34"><path d="M19 5 L31 16 L19 27 V20.5 C11 20.5 6.5 23 3 29 C4 20 8.5 13.5 19 12 Z" fill="#fff"/></svg>',
+  more: '<svg viewBox="0 0 34 34"><circle cx="8" cy="17" r="3.2" fill="#fff"/><circle cx="17" cy="17" r="3.2" fill="#fff"/><circle cx="26" cy="17" r="3.2" fill="#fff"/></svg>',
+};
+function icon(name) { return ICONS[name]; }
+
+// ---------------------------------------------------------------------------
+// Background: midnight gradient, drifting glows, and a starfield that freezes during the record stop.
+// ---------------------------------------------------------------------------
+const bg = $('#bg').getContext('2d');
+const STARS = (() => {
+  const R = rng(7);
+  return Array.from({ length: 170 }, () => ({ x: R() * 1920, y: R() * 1080, r: 0.6 + R() ** 3 * 2.2, a: 0.25 + R() * 0.6, s: 0.6 + R() * 2.4, ph: R() * 6.283, d: 0.3 + R() * 0.7, gold: R() < 0.18 }));
+})();
+// Background time stops like a record when "Still 240p." lands, and restarts with the wizard.
+function bgTime(t) {
+  if (t < T.stop) return t;
+  const stopLen = 0.6;
+  if (t < T.stop + stopLen) { const d = t - T.stop; return T.stop + d - (d * d) / (2 * stopLen); }
+  const frozen = T.stop + stopLen / 2;
+  return t < T.wizard ? frozen : frozen + (t - T.wizard);
+}
+function radial(c, x, y, r, col, a) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(col, a));
+  g.addColorStop(0.5, rgba(col, a * 0.35));
+  g.addColorStop(1, rgba(col, 0));
+  c.fillStyle = g;
+  c.fillRect(x - r, y - r, 2 * r, 2 * r);
+}
+function drawBackground(t) {
+  const bt = bgTime(t);
+  const g = bg.createLinearGradient(0, 0, 0, 1080);
+  g.addColorStop(0, '#0d1236');
+  g.addColorStop(1, '#070a22');
+  bg.fillStyle = g;
+  bg.fillRect(0, 0, 1920, 1080);
+  bg.globalCompositeOperation = 'lighter';
+  // A warning-tinted glow during "Still 240p.", cooler everywhere else.
+  const warn = prog(t, T.stat3, T.stat3 + 0.3) * (1 - prog(t, T.wizard, T.wizard + 0.8));
+  radial(bg, 360 + Math.sin(bt * 0.21) * 90, 170 + Math.cos(bt * 0.17) * 50, 1000, [108, 60, 224], 0.34);
+  radial(bg, 1640 + Math.cos(bt * 0.19) * 70, 960, 850, [31, 150, 255], 0.16);
+  if (warn > 0) radial(bg, 560, 640, 900, [255, 90, 60], 0.12 * warn);
+  const cta = prog(t, T.cta - 0.2, T.cta + 1.2);
+  if (cta > 0) radial(bg, 960, 380, 900, [140, 90, 255], 0.22 * cta);
+  bg.globalCompositeOperation = 'source-over';
+  for (const s of STARS) {
+    const x = (s.x - bt * 9 * s.d + 1920 * 4) % 1920;
+    const tw = 0.55 + 0.45 * Math.sin(bt * s.s + s.ph);
+    bg.fillStyle = s.gold ? rgba(COLORS.gold, s.a * tw) : rgba([220, 225, 255], s.a * tw);
+    bg.beginPath();
+    bg.arc(x, s.y, s.r, 0, 6.283);
+    bg.fill();
+  }
+  const v = bg.createRadialGradient(960, 540, 420, 960, 540, 1150);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,10,0.5)');
+  bg.fillStyle = v;
+  bg.fillRect(0, 0, 1920, 1080);
+}
+
+// ---------------------------------------------------------------------------
+// Particles: every particle is a pure function of time, so frames render in any order.
+// ---------------------------------------------------------------------------
+const fx = $('#fx').getContext('2d');
+function sparkle(c, x, y, r, rot, col, a) {
+  if (a <= 0.004 || r <= 0.2) return;
+  c.save();
+  c.translate(x, y);
+  c.rotate(rot);
+  c.globalAlpha = clamp(a);
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, r * 2.2);
+  g.addColorStop(0, rgba(col, 0.5));
+  g.addColorStop(1, rgba(col, 0));
+  c.fillStyle = g;
+  c.fillRect(-r * 2.2, -r * 2.2, r * 4.4, r * 4.4);
+  c.fillStyle = rgba([255, 255, 255], 1);
+  c.beginPath();
+  c.moveTo(0, -r);
+  c.quadraticCurveTo(r * 0.12, -r * 0.12, r, 0);
+  c.quadraticCurveTo(r * 0.12, r * 0.12, 0, r);
+  c.quadraticCurveTo(-r * 0.12, r * 0.12, -r, 0);
+  c.quadraticCurveTo(-r * 0.12, -r * 0.12, 0, -r);
+  c.fill();
+  c.globalAlpha = clamp(a) * 0.85;
+  c.fillStyle = rgba(col, 1);
+  c.scale(0.62, 0.62);
+  c.beginPath();
+  c.moveTo(0, -r);
+  c.quadraticCurveTo(r * 0.12, -r * 0.12, r, 0);
+  c.quadraticCurveTo(r * 0.12, r * 0.12, 0, r);
+  c.quadraticCurveTo(-r * 0.12, r * 0.12, -r, 0);
+  c.quadraticCurveTo(-r * 0.12, -r * 0.12, 0, -r);
+  c.fill();
+  c.restore();
+}
+function burst(c, t, t0, o) {
+  const dt = t - t0;
+  if (dt < 0 || dt > 3) return;
+  const R = rng(o.seed || 1);
+  const colors = o.colors || [COLORS.gold, COLORS.white, COLORS.cyan, COLORS.purple];
+  for (let i = 0; i < (o.n || 24); i++) {
+    const a = R() * 6.283, v = lerp(o.speed?.[0] ?? 200, o.speed?.[1] ?? 650, R());
+    const life = lerp(o.life?.[0] ?? 0.6, o.life?.[1] ?? 1.3, R()), size = lerp(o.size?.[0] ?? 7, o.size?.[1] ?? 18, R());
+    const col = colors[Math.floor(R() * colors.length)], spin = (R() - 0.5) * 5, delay = R() * (o.spread || 0);
+    const pt = dt - delay;
+    if (pt < 0 || pt > life) continue;
+    const drag = o.drag ?? 3.2, k = (1 - Math.exp(-drag * pt)) / drag;
+    const sx = o.w ? (R() - 0.5) * o.w : 0, sy = o.h ? (R() - 0.5) * o.h : 0;
+    const x = o.x + sx + Math.cos(a) * v * k, y = o.y + sy + Math.sin(a) * v * k + 0.5 * (o.gravity || 0) * pt * pt;
+    const p = pt / life;
+    sparkle(c, x, y, size * (1 - p * 0.55), spin * pt, col, (p < 0.12 ? p / 0.12 : 1 - (p - 0.12) / 0.88) * (o.alpha ?? 1));
+  }
+}
+// Ambient twinkles around a point: each one fades in and out on its own cycle.
+function twinkles(c, t, o) {
+  const R = rng(o.seed || 3);
+  for (let i = 0; i < o.n; i++) {
+    const ang = R() * 6.283, rad = lerp(o.r0, o.r1, R()), period = 1.4 + R() * 1.6, ph = R() * period, size = lerp(8, 17, R());
+    const col = [COLORS.gold, COLORS.white, COLORS.cyan][Math.floor(R() * 3)];
+    const cyc = ((t - o.t0 + ph) % period) / period;
+    const a = Math.sin(cyc * Math.PI) ** 2 * (o.alpha ?? 1);
+    const orbit = o.orbit ? (t - o.t0) * o.orbit : 0;
+    sparkle(c, o.x + Math.cos(ang + orbit) * rad, o.y + Math.sin(ang + orbit) * rad * (o.squash || 1), size, cyc * 2, col, a);
+  }
+}
+function ring(c, t, t0, x, y, { r0 = 30, r1 = 460, dur = 0.55, col = COLORS.white, width = 14 } = {}) {
+  const p = prog(t, t0, t0 + dur);
+  if (p <= 0 || p >= 1) return;
+  const e = E.out3(p);
+  c.save();
+  c.strokeStyle = rgba(col, (1 - p) * 0.9);
+  c.lineWidth = width * (1 - e) + 1;
+  c.beginPath();
+  c.arc(x, y, lerp(r0, r1, e), 0, 6.283);
+  c.stroke();
+  c.restore();
+}
+// A comet of light along a quadratic arc from the wizard's TV to the player.
+function beam(c, t, t0, t1, a, b) {
+  if (t < t0 || t > t1 + 0.7) return;
+  const ctrl = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 300 };
+  const at = s => ({ x: (1 - s) ** 2 * a.x + 2 * (1 - s) * s * ctrl.x + s * s * b.x, y: (1 - s) ** 2 * a.y + 2 * (1 - s) * s * ctrl.y + s * s * b.y });
+  const head = s => E.io2(clamp(s));
+  const R = rng(11);
+  const n = 70;
+  for (let i = 0; i < n; i++) {
+    const spawn = t0 + (i / n) * (t1 - t0), life = 0.35 + R() * 0.35, jx = (R() - 0.5) * 60, jy = (R() - 0.5) * 60, size = 5 + R() * 9;
+    const col = [COLORS.gold, COLORS.white, COLORS.cyan, COLORS.purple][Math.floor(R() * 4)];
+    const age = t - spawn;
+    if (age < 0 || age > life) continue;
+    const p0 = at(head((spawn - t0) / (t1 - t0)));
+    const q = age / life;
+    sparkle(c, p0.x + jx * q, p0.y + jy * q + 40 * q * q, size * (1 - q * 0.6), age * 4, col, 1 - q);
+  }
+  if (t <= t1) {
+    const p = at(head((t - t0) / (t1 - t0)));
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, 70);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.25, 'rgba(255,230,160,.8)');
+    g.addColorStop(1, 'rgba(160,120,255,0)');
+    c.fillStyle = g;
+    c.fillRect(p.x - 70, p.y - 70, 140, 140);
+    c.restore();
+    sparkle(c, p.x, p.y, 26, t * 6, COLORS.gold, 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The Shorts, drawn in 1080×1920 space into a 720×1280 canvas.
+// ---------------------------------------------------------------------------
+const SW = 1080, SH = 1920;
+function roundRect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+function tokens(c, x, y, parts) { for (const [text, color] of parts) { c.fillStyle = color; c.fillText(text, x, y); x += c.measureText(text).width; } return x; }
+
+function drawCodeShort(c, lt) {
+  let g = c.createLinearGradient(0, 0, 0, SH);
+  g.addColorStop(0, '#241660');
+  g.addColorStop(1, '#0b0a24');
+  c.fillStyle = g;
+  c.fillRect(0, 0, SW, SH);
+  radial(c, 840 + Math.sin(lt * 0.7) * 50, 300, 760, [150, 95, 255], 0.55);
+  radial(c, 160, 1560, 700, [60, 200, 255], 0.22);
+  c.textBaseline = 'alphabetic';
+  c.translate(0, 50);
+  c.letterSpacing = '-2px';
+  c.font = '800 104px "Bricolage Grotesque"';
+  c.fillStyle = '#ffffff';
+  c.fillText('Group any array', 86, 392);
+  g = c.createLinearGradient(86, 0, 700, 0);
+  g.addColorStop(0, '#ffe08a');
+  g.addColorStop(1, '#ff9a3d');
+  c.fillStyle = g;
+  c.fillText('in one line', 86, 500);
+  c.letterSpacing = '0px';
+  // Editor card
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,.5)';
+  c.shadowBlur = 60;
+  c.shadowOffsetY = 20;
+  c.fillStyle = '#0b0e1f';
+  roundRect(c, 64, 604, 952, 640, 40);
+  c.fill();
+  c.restore();
+  c.strokeStyle = 'rgba(255,255,255,.1)';
+  c.lineWidth = 3;
+  roundRect(c, 64, 604, 952, 640, 40);
+  c.stroke();
+  [['#ff5f57', 118], ['#febc2e', 160], ['#28c840', 202]].forEach(([col, x]) => { c.fillStyle = col; c.beginPath(); c.arc(x, 664, 13, 0, 6.283); c.fill(); });
+  c.font = '500 30px "JetBrains Mono"';
+  c.fillStyle = '#6f7399';
+  c.fillText('teams.js', 250, 675);
+  c.fillStyle = 'rgba(255,255,255,.07)';
+  c.fillRect(64, 712, 952, 3);
+  c.font = '500 46px "JetBrains Mono"';
+  const L = 790, LH = 84;
+  c.font = '500 30px "JetBrains Mono"';
+  c.fillStyle = '#4a4f7a';
+  ['1', '2', '3', '4'].forEach((n, i) => c.fillText(n, 84, L + i * LH - 4));
+  c.font = '500 46px "JetBrains Mono"';
+  const X = { kw: '#c792ea', id: '#eeeeff', op: '#89ddff', cls: '#ffcb6b', fn: '#82aaff', arg: '#f78c6c', pun: '#a6accd' };
+  const lineX = (i, parts) => tokens(c, 130, L + i * LH, parts);
+  lineX(0, [['const ', X.kw], ['byTeam ', X.id], ['= ', X.op], ['Object', X.cls], ['.', X.pun], ['groupBy', X.fn], ['(', X.pun]]);
+  lineX(1, [['  players', X.arg], [',', X.pun]]);
+  lineX(2, [['  (', X.pun], ['p', X.arg], [') ', X.pun], ['=> ', X.kw], ['p', X.id], ['.', X.pun], ['team', X.fn]]);
+  const endX = lineX(3, [[')', X.pun], [';', X.pun]]);
+  if (Math.floor(lt * 2) % 2 === 0) { c.fillStyle = '#ffd166'; c.fillRect(endX + 6, L + 3 * LH - 40, 5, 52); }
+  // Result card
+  c.fillStyle = 'rgba(92,225,255,.08)';
+  roundRect(c, 64, 1290, 952, 250, 34);
+  c.fill();
+  c.strokeStyle = 'rgba(92,225,255,.28)';
+  c.lineWidth = 3;
+  roundRect(c, 64, 1290, 952, 250, 34);
+  c.stroke();
+  c.font = '500 34px "JetBrains Mono"';
+  c.fillStyle = '#6f93a8';
+  c.fillText('// result', 112, 1370);
+  c.font = '600 46px "JetBrains Mono"';
+  tokens(c, 112, 1460, [['{ ', X.pun], ['red', X.id], [': ', X.pun], ['[…3]', '#7ff3d0'], [', ', X.pun], ['blue', X.id], [': ', X.pun], ['[…5]', '#7ff3d0'], [' }', X.pun]]);
+  c.translate(0, -50);
+}
+
+const MOUNTAINS = (() => {
+  const R = rng(21);
+  const ridge = (base, amp, step, jag) => {
+    const pts = [];
+    let y = base;
+    for (let x = -40; x <= SW + 40; x += step) {
+      y = base - amp * (0.5 + 0.5 * Math.sin(x * 0.006 + R() * 0.8)) - (R() - 0.5) * jag;
+      pts.push([x, y]);
+    }
+    return pts;
+  };
+  const trees = Array.from({ length: 70 }, () => ({ x: R() * SW, h: 40 + R() * 90, w: 16 + R() * 18 }));
+  const birds = Array.from({ length: 4 }, () => ({ x: R() * SW, y: 520 + R() * 260, s: 0.7 + R() * 0.6, v: 14 + R() * 18, ph: R() * 6 }));
+  const stars = Array.from({ length: 90 }, () => ({ x: R() * SW, y: R() * 620, r: 1 + R() * 2.4, ph: R() * 6.28 }));
+  return { back: ridge(900, 260, 60, 90), mid: ridge(1000, 200, 44, 70), front: ridge(1080, 130, 32, 50), trees, birds, stars };
+})();
+function fillRidge(c, pts, bottom, fill) {
+  c.fillStyle = fill;
+  c.beginPath();
+  c.moveTo(pts[0][0], bottom);
+  for (const [x, y] of pts) c.lineTo(x, y);
+  c.lineTo(pts[pts.length - 1][0], bottom);
+  c.closePath();
+  c.fill();
+}
+function drawMountainShort(c, lt) {
+  c.save();
+  const z = 1 + lt * 0.012;
+  c.translate(SW / 2, SH * 0.55);
+  c.scale(z, z);
+  c.translate(-SW / 2, -SH * 0.55);
+  const horizon = 1110;
+  let g = c.createLinearGradient(0, 0, 0, horizon);
+  g.addColorStop(0, '#101c52');
+  g.addColorStop(0.36, '#3b2b7c');
+  g.addColorStop(0.64, '#b04a7e');
+  g.addColorStop(0.86, '#ff8a5c');
+  g.addColorStop(1, '#ffd08a');
+  c.fillStyle = g;
+  c.fillRect(-60, -60, SW + 120, horizon + 60);
+  for (const s of MOUNTAINS.stars) { c.fillStyle = `rgba(255,255,255,${0.35 + 0.35 * Math.sin(lt * 2 + s.ph)})`; c.beginPath(); c.arc(s.x, s.y, s.r, 0, 6.283); c.fill(); }
+  radial(c, 540, 1020, 560, [255, 170, 90], 0.55);
+  c.fillStyle = '#fff1c9';
+  c.beginPath();
+  c.arc(540, 1030, 118, 0, 6.283);
+  c.fill();
+  fillRidge(c, MOUNTAINS.back, horizon, '#8a4a86');
+  fillRidge(c, MOUNTAINS.mid, horizon, '#55306a');
+  fillRidge(c, MOUNTAINS.front, horizon, '#2c1b44');
+  // Lake reflection
+  g = c.createLinearGradient(0, horizon, 0, SH);
+  g.addColorStop(0, '#ff9a6a');
+  g.addColorStop(0.18, '#9a4a7a');
+  g.addColorStop(0.55, '#3a2560');
+  g.addColorStop(1, '#130f2e');
+  c.fillStyle = g;
+  c.fillRect(-60, horizon, SW + 120, SH - horizon + 60);
+  for (let i = 0; i < 46; i++) {
+    const y = horizon + 8 + i * i * 0.42 + i * 4;
+    const w = 220 - i * 3.6 + Math.sin(lt * 3 + i * 1.7) * 40;
+    c.fillStyle = `rgba(255,236,190,${Math.max(0, 0.75 - i * 0.016)})`;
+    c.fillRect(540 - w / 2 + Math.sin(lt * 2 + i) * 14, y, w, 3 + i * 0.08);
+  }
+  for (let i = 0; i < 38; i++) {
+    const y = horizon + 30 + i * 21;
+    c.fillStyle = `rgba(255,255,255,${0.05 + 0.05 * Math.sin(lt * 1.5 + i)})`;
+    c.fillRect((i * 97) % 300 - 100 + Math.sin(lt + i) * 30, y, 520 + (i % 5) * 60, 2);
+  }
+  c.fillStyle = '#140c24';
+  for (const tr of MOUNTAINS.trees) {
+    if (Math.abs(tr.x - 540) < 150) continue;
+    c.beginPath();
+    c.moveTo(tr.x, horizon + 6 - tr.h);
+    c.lineTo(tr.x + tr.w, horizon + 8);
+    c.lineTo(tr.x - tr.w, horizon + 8);
+    c.fill();
+  }
+  c.fillRect(-60, horizon, SW + 120, 10);
+  c.strokeStyle = '#1b1030';
+  c.lineWidth = 5;
+  c.lineCap = 'round';
+  for (const b of MOUNTAINS.birds) {
+    const x = (b.x + lt * b.v) % (SW + 80) - 40, y = b.y + Math.sin(lt * 2 + b.ph) * 8, s = 18 * b.s, flap = Math.sin(lt * 7 + b.ph) * 6;
+    c.beginPath();
+    c.moveTo(x - s, y - flap);
+    c.quadraticCurveTo(x - s / 2, y - s / 2 - flap, x, y);
+    c.quadraticCurveTo(x + s / 2, y - s / 2 - flap, x + s, y - flap);
+    c.stroke();
+  }
+  c.restore();
+  c.textAlign = 'center';
+  c.letterSpacing = '14px';
+  c.font = '700 46px Inter';
+  c.fillStyle = 'rgba(255,255,255,.92)';
+  c.fillText('GOLDEN HOUR', SW / 2 + 7, 300);
+  c.letterSpacing = '0px';
+  c.font = '500 36px Inter';
+  c.fillStyle = 'rgba(255,255,255,.75)';
+  c.fillText('Alpine lake · 6:42 pm', SW / 2, 366);
+  c.textAlign = 'left';
+}
+
+const SPACE = (() => {
+  const R = rng(33);
+  return {
+    stars: Array.from({ length: 320 }, () => ({ x: R() * SW, y: R() * SH, r: 0.8 + R() ** 4 * 3.6, ph: R() * 6.28, s: 1 + R() * 3 })),
+    flares: Array.from({ length: 7 }, () => ({ x: R() * SW, y: 500 + R() * 1300, r: 16 + R() * 18 })),
+  };
+})();
+function drawSpaceShort(c, lt) {
+  c.fillStyle = '#05030f';
+  c.fillRect(0, 0, SW, SH);
+  radial(c, 230, 620, 720, [255, 79, 163], 0.3);
+  radial(c, 880, 1420, 800, [59, 107, 255], 0.32);
+  radial(c, 600, 980, 560, [138, 63, 252], 0.26);
+  for (const s of SPACE.stars) {
+    const tw = 0.55 + 0.45 * Math.sin(lt * s.s + s.ph);
+    c.fillStyle = `rgba(255,255,255,${0.8 * tw})`;
+    c.beginPath();
+    c.arc((s.x + lt * 6) % SW, s.y, s.r, 0, 6.283);
+    c.fill();
+  }
+  for (const f of SPACE.flares) {
+    c.strokeStyle = 'rgba(200,220,255,.55)';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(f.x - f.r, f.y); c.lineTo(f.x + f.r, f.y);
+    c.moveTo(f.x, f.y - f.r); c.lineTo(f.x, f.y + f.r);
+    c.stroke();
+  }
+  const cx = 540, cy = 1070 + Math.sin(lt * 0.8) * 10, pr = 240, tilt = -0.32;
+  const rings = [[300, 360, 'rgba(225,200,150,.55)'], [362, 430, 'rgba(240,215,165,.8)'], [446, 470, 'rgba(200,175,130,.5)'], [474, 520, 'rgba(230,205,160,.35)']];
+  const drawRings = half => {
+    c.save();
+    c.translate(cx, cy);
+    c.rotate(tilt);
+    c.scale(1, 0.26);
+    c.beginPath();
+    if (half === 'back') c.rect(-600, -600, 1200, 600);
+    else c.rect(-600, 0, 1200, 600);
+    c.clip();
+    for (const [r0, r1, col] of rings) {
+      c.strokeStyle = col;
+      c.lineWidth = r1 - r0;
+      c.beginPath();
+      c.arc(0, 0, (r0 + r1) / 2, 0, 6.283);
+      c.stroke();
+    }
+    c.restore();
+  };
+  drawRings('back');
+  c.save();
+  c.beginPath();
+  c.arc(cx, cy, pr, 0, 6.283);
+  c.clip();
+  const g = c.createRadialGradient(cx - 90, cy - 110, 20, cx, cy, pr * 1.1);
+  g.addColorStop(0, '#fbe7bd');
+  g.addColorStop(0.5, '#d9b27a');
+  g.addColorStop(1, '#5b3f22');
+  c.fillStyle = g;
+  c.fillRect(cx - pr, cy - pr, pr * 2, pr * 2);
+  c.translate(cx, cy);
+  c.rotate(tilt);
+  for (let i = -8; i <= 8; i++) {
+    c.fillStyle = i % 2 ? 'rgba(120,80,40,.16)' : 'rgba(255,240,210,.12)';
+    c.fillRect(-pr, i * 28 - 8, pr * 2, 14 + (i % 3) * 5);
+  }
+  c.restore();
+  drawRings('front');
+  c.textAlign = 'center';
+  c.letterSpacing = '-2px';
+  c.font = '800 96px "Bricolage Grotesque"';
+  c.fillStyle = '#ffffff';
+  c.fillText('Saturn is slowly', SW / 2, 330);
+  c.fillText('losing its rings.', SW / 2, 430);
+  c.letterSpacing = '0px';
+  c.font = '500 38px Inter';
+  c.fillStyle = 'rgba(210,200,255,.8)';
+  c.fillText('It’s called “ring rain.”', SW / 2, 510);
+  c.textAlign = 'left';
+}
+
+const RAMEN = (() => {
+  const R = rng(44);
+  return {
+    noodles: Array.from({ length: 34 }, () => ({ x: 280 + R() * 520, y: 950 + R() * 220, len: 120 + R() * 200, amp: 10 + R() * 16, f: 0.03 + R() * 0.03, a: -0.5 + R() })),
+    scallions: Array.from({ length: 26 }, () => ({ x: 300 + R() * 480, y: 900 + R() * 260, r: 9 + R() * 7 })),
+    sesame: Array.from({ length: 40 }, () => ({ x: 330 + R() * 420, y: 930 + R() * 220, a: R() * 3 })),
+  };
+})();
+function drawRamenShort(c, lt) {
+  let g = c.createLinearGradient(0, 0, 0, SH);
+  g.addColorStop(0, '#3a1a0e');
+  g.addColorStop(1, '#120806');
+  c.fillStyle = g;
+  c.fillRect(0, 0, SW, SH);
+  radial(c, 540, 700, 800, [255, 150, 70], 0.28);
+  // Table
+  c.fillStyle = '#24110a';
+  c.fillRect(0, 1320, SW, SH);
+  for (let i = 0; i < 12; i++) { c.fillStyle = `rgba(255,190,120,${0.03 + (i % 3) * 0.015})`; c.fillRect(0, 1340 + i * 52, SW, 4); }
+  const bx = 540, by = 1060;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.beginPath(); c.ellipse(bx, by + 330, 430, 70, 0, 0, 6.283); c.fill();
+  // Bowl body
+  g = c.createLinearGradient(0, by, 0, by + 380);
+  g.addColorStop(0, '#f1ebe1');
+  g.addColorStop(1, '#a89b8a');
+  c.fillStyle = g;
+  c.beginPath();
+  c.ellipse(bx, by, 440, 300, 0, 0, Math.PI);
+  c.lineTo(bx - 440, by);
+  c.fill();
+  c.fillStyle = '#c0392b';
+  c.beginPath(); c.ellipse(bx, by + 36, 432, 262, 0, 0.12, Math.PI - 0.12); c.ellipse(bx, by + 20, 436, 250, 0, Math.PI - 0.12, 0.12, true); c.fill();
+  // Rim and broth
+  c.fillStyle = '#f6f1e8';
+  c.beginPath(); c.ellipse(bx, by, 440, 168, 0, 0, 6.283); c.fill();
+  g = c.createRadialGradient(bx - 60, by - 40, 20, bx, by, 400);
+  g.addColorStop(0, '#f3b25e');
+  g.addColorStop(1, '#b8601f');
+  c.fillStyle = g;
+  c.beginPath(); c.ellipse(bx, by + 4, 400, 146, 0, 0, 6.283); c.fill();
+  c.save();
+  c.beginPath(); c.ellipse(bx, by + 4, 398, 144, 0, 0, 6.283); c.clip();
+  c.translate(0, -60);
+  c.strokeStyle = '#f7dc8f';
+  c.lineWidth = 9;
+  c.lineCap = 'round';
+  for (const n of RAMEN.noodles) {
+    c.beginPath();
+    for (let i = 0; i <= n.len; i += 8) {
+      const x = n.x + i * Math.cos(n.a), y = n.y + i * Math.sin(n.a) * 0.4 + Math.sin(i * n.f * 4 + lt) * n.amp;
+      if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.stroke();
+  }
+  c.restore();
+  // Egg halves
+  const egg = (x, y, rot) => {
+    c.save(); c.translate(x, y); c.rotate(rot);
+    c.fillStyle = '#fffaf0'; c.beginPath(); c.ellipse(0, 0, 78, 56, 0, 0, 6.283); c.fill();
+    const yg = c.createRadialGradient(-6, -6, 4, 0, 0, 40);
+    yg.addColorStop(0, '#ffd166'); yg.addColorStop(1, '#ff8a00');
+    c.fillStyle = yg; c.beginPath(); c.ellipse(4, 2, 40, 30, 0, 0, 6.283); c.fill();
+    c.restore();
+  };
+  egg(380, 1000, -0.35);
+  egg(470, 1040, 0.25);
+  // Chashu
+  const pork = (x, y) => {
+    c.fillStyle = '#b86a4a'; c.beginPath(); c.ellipse(x, y, 92, 66, 0.2, 0, 6.283); c.fill();
+    c.strokeStyle = 'rgba(255,220,190,.55)'; c.lineWidth = 7; c.beginPath(); c.ellipse(x, y, 60, 40, 0.2, 0, 5.2); c.stroke();
+    c.strokeStyle = 'rgba(90,40,20,.5)'; c.lineWidth = 6; c.beginPath(); c.ellipse(x, y, 88, 62, 0.2, 0, 6.283); c.stroke();
+  };
+  pork(690, 1010);
+  pork(620, 1090);
+  // Nori
+  c.fillStyle = '#1e3a2c';
+  c.save(); c.translate(820, 930); c.rotate(0.28); c.fillRect(-60, -150, 120, 190); c.restore();
+  for (const s of RAMEN.scallions) { c.strokeStyle = '#86c96d'; c.lineWidth = 5; c.beginPath(); c.arc(s.x, s.y, s.r, 0, 6.283); c.stroke(); }
+  for (const s of RAMEN.sesame) { c.fillStyle = '#fff4d6'; c.beginPath(); c.ellipse(s.x, s.y, 5, 2.6, s.a, 0, 6.283); c.fill(); }
+  // Chopsticks
+  c.save();
+  c.translate(790, 900); c.rotate(-0.6);
+  c.fillStyle = '#d9a86c'; c.beginPath(); c.roundRect(-20, -250, 22, 480, 10); c.fill();
+  c.fillStyle = '#c99658'; c.beginPath(); c.roundRect(24, -240, 22, 480, 10); c.fill();
+  c.restore();
+  // Steam
+  c.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    const x0 = 360 + i * 120;
+    const rise = (lt * 60 + i * 50) % 260;
+    c.strokeStyle = `rgba(255,255,255,${0.16 * (1 - rise / 260)})`;
+    c.lineWidth = 16;
+    c.beginPath();
+    for (let y = 0; y < 300; y += 10) {
+      const px = x0 + Math.sin((y + lt * 90 + i * 40) * 0.025) * 22, py = 860 - rise - y;
+      if (y === 0) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+  }
+  c.textAlign = 'center';
+  c.letterSpacing = '-2px';
+  c.font = '800 108px "Bricolage Grotesque"';
+  c.fillStyle = '#fff6ea';
+  c.fillText('15-minute', SW / 2, 330);
+  g = c.createLinearGradient(260, 0, 820, 0);
+  g.addColorStop(0, '#ffe08a');
+  g.addColorStop(1, '#ff8a3d');
+  c.fillStyle = g;
+  c.fillText('ramen', SW / 2, 440);
+  c.letterSpacing = '0px';
+  c.font = '500 40px Inter';
+  c.fillStyle = 'rgba(255,230,210,.78)';
+  c.fillText('that tastes like three hours', SW / 2, 520);
+  c.textAlign = 'left';
+}
+const SHORTS = [drawCodeShort, drawMountainShort, drawSpaceShort, drawRamenShort];
+const SHORT_UI = [
+  { handle: '@codewizard', cap: 'Group arrays in one line. #javascript #webdev', likes: '48K', comments: '1.2K', av: ['#7c4dff', '#5ce1ff'] },
+  { handle: '@wanderlight', cap: 'Golden hour hits different up here.', likes: '212K', comments: '3.4K', av: ['#ff8a5c', '#ffd08a'] },
+  { handle: '@cosmosdaily', cap: 'Ring rain is real. #space #saturn', likes: '96K', comments: '2.1K', av: ['#3b6bff', '#ff4fa3'] },
+  { handle: '@noodlelab', cap: 'Weeknight ramen, zero shortcuts. #cooking', likes: '131K', comments: '4.8K', av: ['#ff8a00', '#ffd166'] },
+];
+
+// Low resolution is simulated relative to the on-screen player: downscale, JPEG-compress, then upscale.
+const SIM = { 1080: null, 720: { w: 470, q: 0.9 }, 480: { w: 260, q: 0.78 }, 360: { w: 176, q: 0.6 }, 240: { w: 112, q: 0.45 } };
+const hi = document.createElement('canvas');
+hi.width = 720; hi.height = 1280;
+const hiC = hi.getContext('2d');
+const lo = document.createElement('canvas');
+const loC = lo.getContext('2d');
+const shortCanvas = $('#shortCanvas');
+const sc = shortCanvas.getContext('2d');
+async function composeShort(index, lt, quality, y) {
+  hiC.setTransform(720 / SW, 0, 0, 1280 / SH, 0, 0);
+  hiC.clearRect(0, 0, SW, SH);
+  SHORTS[index](hiC, lt);
+  hiC.setTransform(1, 0, 0, 1, 0, 0);
+  const sim = SIM[quality];
+  if (!sim) { sc.drawImage(hi, 0, y); return; }
+  lo.width = sim.w;
+  lo.height = Math.round((sim.w * 16) / 9);
+  loC.imageSmoothingQuality = 'high';
+  loC.drawImage(hi, 0, 0, lo.width, lo.height);
+  const blob = await new Promise(resolve => lo.toBlob(resolve, 'image/jpeg', sim.q));
+  const bitmap = await createImageBitmap(blob);
+  sc.imageSmoothingEnabled = true;
+  sc.imageSmoothingQuality = 'low';
+  sc.drawImage(bitmap, 0, y, 720, 1280);
+  bitmap.close();
+}
+function feedPosition(t) {
+  let p = 0;
+  for (const s of FEED) if (s.swipe !== null) p += E.io3(prog(t, s.swipe, s.swipe + SWIPE));
+  return p;
+}
+function shortQuality(i, t) { const s = FEED[i]; return t >= s.fix ? s.best : s.arrive; }
+function shortLocalTime(i, t) { return i === 0 ? t : Math.max(0, t - FEED[i].swipe); }
+async function drawPlayer(t) {
+  const p = feedPosition(t);
+  const i0 = Math.min(FEED.length - 1, Math.floor(p)), frac = p - i0;
+  sc.fillStyle = '#000';
+  sc.fillRect(0, 0, 720, 1280);
+  await composeShort(i0, shortLocalTime(i0, t), shortQuality(i0, t), -frac * 1280);
+  if (frac > 0.0005 && i0 + 1 < FEED.length) await composeShort(i0 + 1, shortLocalTime(i0 + 1, t), shortQuality(i0 + 1, t), (1 - frac) * 1280);
+  $('#feedTrack').style.transform = `translateY(${(-p * 896).toFixed(2)}px)`;
+  FEED.forEach((s, i) => { progressBars[i].style.width = `${(clamp(shortLocalTime(i, t) / 28) * 100).toFixed(2)}%`; });
+}
+
+// ---------------------------------------------------------------------------
+// Build DOM pieces
+// ---------------------------------------------------------------------------
+document.querySelectorAll('svg[data-icon]').forEach(el => { el.outerHTML = icon(el.dataset.icon).replace('<svg', `<svg style="${el.getAttribute('style') || ''}" class="${el.getAttribute('class') || ''}"`); });
+document.querySelectorAll('[data-words]').forEach(buildWords);
+const progressBars = [];
+SHORT_UI.forEach(u => {
+  const el = document.createElement('div');
+  el.className = 'short-ui';
+  el.innerHTML = `<div class="scrim"></div>
+    <div class="rail"><div>${icon('heart')}${u.likes}</div><div>${icon('comment')}${u.comments}</div><div>${icon('share')}Share</div><div>${icon('more')}</div></div>
+    <div class="meta"><div class="who"><span class="avatar" style="background:linear-gradient(135deg,${u.av[0]},${u.av[1]})"></span>${u.handle}</div><div class="cap">${u.cap}</div></div>
+    <div class="progress"><i></i></div>`;
+  $('#feedTrack').append(el);
+  progressBars.push(el.querySelector('.progress i'));
+});
+const logRows = FEED.map((s, i) => {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const dims = s.best === 1080 ? '1080 × 1920' : '720 × 1280';
+  row.innerHTML = `${icon(s.best === 1080 ? 'ok' : 'okGold')}<span class="name">${s.name}</span><span class="dims">${dims}</span><span class="pill"><b class="${s.best === 1080 ? '' : 'ok'}">${s.best}p</b>${s.best === 1080 ? '' : '<em>best<br>available</em>'}</span>`;
+  $('#log').append(row);
+  return row;
+});
+
+// Adaptation chart geometry (card coordinates).
+const CH = { x0: 150, x1: 1530, q: { 1080: 118, 720: 206, 480: 294 }, bTop: 392, bBot: 520, bMax: 30 };
+const cx = s => CH.x0 + (s / CHART.endS) * (CH.x1 - CH.x0);
+const cyB = b => CH.bBot - (b / CH.bMax) * (CH.bBot - CH.bTop);
+const BUFFER = [[0, 22], [5, 22], [10, 0.4], [12.5, 0.4], [15, 2.8], [19, 0.4], [22, 0.4], [24, 1.5], [26, 5], [34, 16.5], [42, 22], [54, 24], [56, 20.5], [62, 22.5], [76, 24]];
+function qStops() {
+  const f = s => (cx(s) - CH.x0) / (CH.x1 - CH.x0), d = 0.006;
+  return [[0, '#5ce1ff'], [f(CHART.dropS) - d, '#5ce1ff'], [f(CHART.dropS) + d, '#ffd166'], [f(CHART.upS) - d, '#ffd166'], [f(CHART.upS) + d, '#5ce1ff'], [1, '#5ce1ff']]
+    .map(([o, c]) => `<stop offset="${o.toFixed(4)}" stop-color="${c}"/>`).join('');
+}
+function chartSvg() {
+  const q = CH.q;
+  const qPath = `M ${cx(0)} ${q[1080]} H ${cx(CHART.dropS) - 10} Q ${cx(CHART.dropS)} ${q[1080]} ${cx(CHART.dropS)} ${q[1080] + 12} V ${q[720] - 12} Q ${cx(CHART.dropS)} ${q[720]} ${cx(CHART.dropS) + 10} ${q[720]} H ${cx(CHART.upS) - 10} Q ${cx(CHART.upS)} ${q[720]} ${cx(CHART.upS)} ${q[720] - 12} V ${q[1080] + 12} Q ${cx(CHART.upS)} ${q[1080]} ${cx(CHART.upS) + 10} ${q[1080]} H ${cx(CHART.endS)}`;
+  const bPts = BUFFER.map(([s, b]) => `${cx(s).toFixed(1)} ${cyB(b).toFixed(1)}`);
+  const bLine = `M ${bPts.join(' L ')}`;
+  const bArea = `${bLine} L ${cx(CHART.endS)} ${CH.bBot} L ${cx(0)} ${CH.bBot} Z`;
+  const grid = [1080, 720, 480].map(level => `<line x1="${CH.x0}" x2="${CH.x1}" y1="${q[level]}" y2="${q[level]}" stroke="rgba(255,255,255,.09)" stroke-width="2" stroke-dasharray="6 10"/><text x="${CH.x0 - 28}" y="${q[level] + 9}" text-anchor="end" font-family="JetBrains Mono" font-weight="600" font-size="26" fill="#8583b8">${level}p</text>`).join('');
+  const ticks = [0, 20, 40, 60].map(s => `<text x="${cx(s)}" y="562" text-anchor="middle" font-family="JetBrains Mono" font-size="22" fill="#6c6aa0">${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}</text>`).join('');
+  return `<defs>
+      <linearGradient id="bufFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ce1ff" stop-opacity=".42"/><stop offset="1" stop-color="#5ce1ff" stop-opacity=".02"/></linearGradient>
+      <linearGradient id="qStroke" gradientUnits="userSpaceOnUse" x1="${CH.x0}" y1="0" x2="${CH.x1}" y2="0">${qStops()}</linearGradient>
+      <filter id="softGlow" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <clipPath id="revealClip"><rect id="revealRect" x="0" y="0" width="0" height="640"/></clipPath>
+    </defs>
+    ${grid}
+    <text x="${CH.x0 - 28}" y="${cyB(15) + 8}" text-anchor="end" font-family="Inter" font-weight="600" font-size="22" fill="#8583b8">buffer</text>
+    <line x1="${CH.x0}" x2="${CH.x1}" y1="${CH.bBot}" y2="${CH.bBot}" stroke="rgba(255,255,255,.12)" stroke-width="2"/>
+    <line x1="${CH.x0}" x2="${CH.x1}" y1="${cyB(15)}" y2="${cyB(15)}" stroke="rgba(92,225,255,.4)" stroke-width="2" stroke-dasharray="4 8"/>
+    <text x="${CH.x1 + 14}" y="${cyB(15) + 8}" font-family="JetBrains Mono" font-size="22" fill="#5ce1ff" opacity=".8">15 s</text>
+    ${ticks}
+    <g clip-path="url(#revealClip)">
+      <path d="${bArea}" fill="url(#bufFill)"/>
+      <path d="${bLine}" fill="none" stroke="#5ce1ff" stroke-width="4" stroke-linejoin="round"/>
+      <path d="${qPath}" fill="none" stroke="url(#qStroke)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#softGlow)"/>
+    </g>
+    <path id="bracket" d="M ${cx(24)} ${CH.bTop - 8} v -14 H ${cx(54)} v 14" fill="none" stroke="#5ce1ff" stroke-width="3" stroke-linejoin="round"/>
+    ${CHART.stalls.map((st, i) => `<g id="stallMark${i + 1}"><circle cx="${cx(st)}" cy="${q[1080]}" r="11" fill="#ff6b4a" stroke="#1a1238" stroke-width="4"/><line x1="${cx(st)}" x2="${cx(st)}" y1="${q[1080] - 16}" y2="${q[1080] - 26}" stroke="#ff6b4a" stroke-width="3" stroke-linecap="round"/></g>`).join('')}
+    <line id="playhead" x1="0" x2="0" y1="96" y2="${CH.bBot}" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
+    <circle id="headDot" r="13" fill="#fff"/>
+    <circle id="headHalo" r="26" fill="none" stroke="#fff" stroke-width="3"/>
+    <circle id="bufDot" r="8" fill="#5ce1ff"/>`;
+}
+$('#chartSvg').innerHTML = chartSvg();
+function sampleBuffer(s) {
+  for (let i = 1; i < BUFFER.length; i++) {
+    const [s0, b0] = BUFFER[i - 1], [s1, b1] = BUFFER[i];
+    if (s <= s1) return lerp(b0, b1, (s - s0) / (s1 - s0));
+  }
+  return BUFFER[BUFFER.length - 1][1];
+}
+function wifiSvg(bars) {
+  const col = i => (i < bars ? (bars === 1 ? '#ff6b4a' : bars === 2 ? '#ffd166' : '#5ce1ff') : 'rgba(255,255,255,.18)');
+  return `<path d="M22 36 m-3.5 0 a3.5 3.5 0 1 0 7 0 a3.5 3.5 0 1 0 -7 0" fill="${col(0)}"/>
+    <path d="M13 26 a13 13 0 0 1 18 0" fill="none" stroke="${col(1)}" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M6 18 a22 22 0 0 1 32 0" fill="none" stroke="${col(2)}" stroke-width="4.5" stroke-linecap="round"/>`;
+}
+
+// ---------------------------------------------------------------------------
+// Scenes
+// ---------------------------------------------------------------------------
+const el = id => document.getElementById(id);
+const S = { s1: el('s1'), s2: el('s2'), s3: el('s3'), s4: el('s4'), s5: el('s5'), s6: el('s6'), s7: el('s7'), s8: el('s8') };
+const player = el('player'), wizard = el('wizard'), sticker = el('sticker'), stats = el('stats');
+const PLAYER_CENTER = { x: 1216 + 252, y: 92 + 448 };
+const WIZ = {
+  s2: { x: 600, y: 350, size: 380 },
+  s8: { x: 960, y: 318, size: 340 },
+};
+let TITLE = null; // measured once fonts are ready
+
+function wizardPose(t) {
+  // Returns center/size/opacity/rotation of the wizard badge for time t.
+  const bob = Math.sin(t * 1.7) * 7, tilt = Math.sin(t * 1.25) * 1.6;
+  if (t < T.wizard) return null;
+  if (t < T.title - 0.3) {
+    const sp = spring(t - T.wizard, 150, 13);
+    return { x: WIZ.s2.x, y: WIZ.s2.y + bob, size: WIZ.s2.size * lerp(0.25, 1, sp), r: lerp(-14, 0, sp) + tilt, o: clamp((t - T.wizard) / 0.12) };
+  }
+  if (t < T.out3 + 0.4) {
+    const p = E.io3(prog(t, T.title - 0.3, T.title + 0.45));
+    const out = exitOf(t, T.out3, 0.3);
+    return { x: lerp(WIZ.s2.x, TITLE.wx, p), y: lerp(WIZ.s2.y, TITLE.wy, p) + bob * (1 - p) - out * 20, size: lerp(WIZ.s2.size, TITLE.size, p) * (1 - out * 0.08), r: tilt * (1 - p), o: 1 - out };
+  }
+  if (t >= T.cta) {
+    const sp = spring(t - T.cta, 140, 12);
+    return { x: WIZ.s8.x, y: WIZ.s8.y + bob, size: WIZ.s8.size * lerp(0.3, 1, sp), r: lerp(10, 0, sp) + tilt, o: clamp((t - T.cta) / 0.12) };
+  }
+  return null;
+}
+// Points inside the badge artwork, as fractions of its size.
+const TV_SCREEN = { x: 0.82, y: 0.64 }, LENS = { x: 0.485, y: 0.33 }, LENS2 = { x: 0.345, y: 0.335 };
+
+function playerPose(t) {
+  if (t < T.title + 0.3) {
+    const inP = E.out4(prog(t, 0.1, 0.9));
+    const push = E.io2(prog(t, T.stop, T.wizard)) * (1 - E.io3(prog(t, T.wizard, T.wizard + 0.6)));
+    const bump = t > T.impact ? Math.sin(clamp((t - T.impact) / 0.35) * Math.PI) * 0.035 : 0;
+    const out = E.in3(prog(t, T.out2, T.out2 + 0.55));
+    return { x: out * 260, y: (1 - inP) * 70, s: (0.94 + 0.06 * inP) * (1 + push * 0.075 + bump), o: inP * (1 - out) };
+  }
+  if (t >= T.feed - 0.1 && t < T.adapt) {
+    const inP = E.out4(prog(t, T.feed - 0.1, T.feed + 0.5));
+    const out = E.in3(prog(t, T.out5, T.out5 + 0.4));
+    return { x: (1 - inP) * 240, y: out * 50, s: 1, o: inP * (1 - out) };
+  }
+  return null;
+}
+
+function stickerState(t) {
+  // Label and colour for the quality sticker on the player.
+  if (t < T.feed) {
+    if (t < T.impact) return { q: 240, tone: 'bad' };
+    const roll = [360, 480, 720, 1080], k = Math.floor((t - T.impact) / 0.075);
+    return { q: roll[Math.min(k, 3)], tone: k >= 3 ? 'good' : 'mid' };
+  }
+  const p = feedPosition(t), i = Math.round(p);
+  const s = FEED[i];
+  const q = shortQuality(i, t);
+  return { q, tone: q === 1080 ? 'good' : q === 720 && t >= s.fix ? 'ok' : q >= 480 ? 'mid' : 'bad', best: q === 720 && t >= s.fix };
+}
+const TONES = { bad: '#ff6b4a', mid: '#ffb35c', ok: '#ffd166', good: '#5ce1ff' };
+
+function renderScene1(t) {
+  const on = t < T.wizard + 0.6;
+  show(S.s1, on);
+  if (!on) return;
+  const out = exitOf(t, T.wizard - 0.15, 0.45);
+  [['s1l1', T.stat1], ['s1l2', T.stat2]].forEach(([id, t0], i) => {
+    const e = el(id), p = E.out4(prog(t, t0, t0 + 0.5));
+    place(e, { x: (1 - p) * -30 - out * 80 * (1 + i * 0.3), o: p * (1 - out) });
+    reveal(e.querySelector('span[data-words]'), t, t0, { stagger: 0.06 });
+    const ic = e.querySelector('svg');
+    const pi = spring(t - t0, 260, 14);
+    ic.style.transform = `scale(${lerp(0.2, 1, pi).toFixed(3)})`;
+  });
+  const l3 = el('s1l3');
+  const p3 = prog(t, T.stat3, T.stat3 + 0.35);
+  const slam = spring(t - T.stat3, 320, 16);
+  const shake = t > T.stop && t < T.stop + 0.5 ? Math.sin((t - T.stop) * 70) * 10 * (1 - (t - T.stop) / 0.5) : 0;
+  place(l3, { x: shake - out * 120, y: 0, s: lerp(1.35, 1, slam), o: clamp(p3 * 3) * (1 - out) });
+  reveal(l3, t, T.stat3, { stagger: 0.05, dur: 0.3, dy: 0.6, ease: E.out3 });
+  // Handwritten note and arrow
+  const n = E.out3(prog(t, T.note, T.note + 0.5)), nOut = 1 - prog(t, T.impact - 0.2, T.impact + 0.1);
+  place(el('s1note'), { r: -4, x: (1 - n) * -20, o: n * nOut * (1 - out) });
+  const draw = E.io2(prog(t, T.note + 0.15, T.note + 0.65));
+  const path = el('s1arrowPath'), head = el('s1arrowHead');
+  const len = 300;
+  path.style.strokeDasharray = len;
+  path.style.strokeDashoffset = (len * (1 - draw)).toFixed(1);
+  head.style.opacity = draw > 0.95 ? 1 : 0;
+  el('s1arrow').style.opacity = (nOut * (1 - out)).toFixed(3);
+}
+
+function renderPlayer(t) {
+  const pose = playerPose(t);
+  show(player, !!pose);
+  if (!pose) return false;
+  place(player, pose);
+  // Stats for nerds: highlight rows as the captions call them out.
+  const statsOn = t < T.feed;
+  show(stats, statsOn);
+  if (statsOn) {
+    const hl = (id, t0, t1, col) => {
+      const a = prog(t, t0, t0 + 0.2) * (1 - prog(t, t1, t1 + 0.3));
+      const h = el(id).querySelector('.hl');
+      h.style.opacity = a.toFixed(3);
+      h.style.background = rgba(col, 0.2);
+      h.style.boxShadow = `inset 0 0 0 1.5px ${rgba(col, 0.75)}`;
+    };
+    hl('rowNet', T.stat1, T.stat2, COLORS.cyan);
+    hl('rowBuf', T.stat2, T.stat3, COLORS.cyan);
+    const fixed = t >= T.impact;
+    hl('rowRes', T.stat3, fixed ? T.hd + 1 : 99, fixed ? COLORS.cyan : COLORS.red);
+    const q = stickerState(t).q;
+    const dims = { 240: '240x426', 360: '360x640', 480: '480x854', 720: '720x1280', 1080: '1080x1920' }[q];
+    setText(el('resValue'), `${dims} / 1080x1920`);
+    el('resValue').style.color = q === 1080 ? '#7ff3d0' : q === 240 ? '#ff9a8a' : '#ffd166';
+    const sOut = prog(t, T.out2 - 0.4, T.out2);
+    stats.style.opacity = (prog(t, 0.35, 0.7) * (1 - sOut)).toFixed(3);
+  }
+  // Flash at the moment of the fix.
+  const f = t >= T.impact ? Math.max(0, 1 - (t - T.impact) / 0.45) : 0;
+  el('flash').style.opacity = (f * 0.95).toFixed(3);
+  // Quality sticker
+  const st = stickerState(t);
+  setText(el('stickerQ'), `${st.q}p`);
+  sticker.style.background = TONES[st.tone];
+  sticker.querySelector('.hd').style.display = st.q === 1080 ? 'inline-block' : 'none';
+  sticker.querySelector('.sub').style.display = st.best ? 'block' : 'none';
+  let changeAt = T.impact;
+  if (t >= T.feed) {
+    const i = Math.round(feedPosition(t));
+    changeAt = t >= FEED[i].fix ? FEED[i].fix : (FEED[i].swipe ?? 0) + SWIPE;
+  }
+  const pop = t >= changeAt ? 1 - spring(t - changeAt, 300, 12) : 0;
+  const stickerIn = spring(t - T.stat3, 260, 13);
+  const stickerOut = t < T.feed ? prog(t, T.out2 - 0.3, T.out2) : 0;
+  place(sticker, { r: 6 + pop * -8, s: (t < T.feed ? lerp(0.1, 1, stickerIn) : 1) * (1 + pop * 0.28), o: (t < T.feed ? clamp((t - T.stat3) / 0.08) : 1) * (1 - stickerOut) });
+  return true;
+}
+
+function renderScene2(t) {
+  const on = t >= T.hd - 0.1 && t < T.title + 0.2;
+  show(S.s2, on);
+  if (!on) return;
+  const out = exitOf(t, T.out2, 0.4);
+  reveal(el('s2h'), t, T.hd, { stagger: 0.08 });
+  reveal(el('s2p'), t, T.same, { stagger: 0.04, dur: 0.5 });
+  place(el('s2h'), { y: -out * 30, o: 1 - out });
+  place(el('s2p'), { y: -out * 30, o: 1 - out });
+}
+
+function renderWizard(t) {
+  const pose = wizardPose(t);
+  show(wizard, !!pose);
+  if (!pose) return null;
+  const s = pose.size / 380;
+  place(wizard, { x: pose.x - 190, y: pose.y - 190, s, r: pose.r, o: pose.o });
+  el('wizardGlow').style.opacity = (0.8 + 0.2 * Math.sin(t * 2.2)).toFixed(3);
+  return pose;
+}
+
+function renderScene3(t) {
+  const on = t >= T.title - 0.2 && t < T.menu + 0.1;
+  show(S.s3, on);
+  if (!on) return;
+  const out = exitOf(t, T.out3, 0.3);
+  const wm = el('wordmark'), sub = el('s3p');
+  place(wm, { x: TITLE.textX, y: TITLE.textY - out * 20, o: 1 - out });
+  place(sub, { x: TITLE.textX + 4, y: TITLE.subY - out * 20, o: 1 - out });
+  reveal(wm, t, T.title + 0.25, { stagger: 0.09, dur: 0.7 });
+  reveal(sub, t, T.title + 0.75, { stagger: 0.035, dur: 0.5 });
+}
+
+function renderScene4(t) {
+  const on = t >= T.menu - 0.05 && t < T.feed;
+  show(S.s4, on);
+  if (!on) return;
+  const out = exitOf(t, T.out4, 0.4);
+  // Menu: springs in, gets hovered, then vanishes in a puff of sparkles.
+  const m = el('menu');
+  const mi = spring(t - T.menu, 150, 16);
+  const poof = E.in2(prog(t, T.poof, T.poof + 0.28));
+  place(m, { x: lerp(-120, 0, mi), y: poof * -10, s: lerp(0.92, 1, mi) * (1 - poof * 0.25), r: lerp(-6, -2, mi), o: clamp((t - T.menu) / 0.2) * (1 - poof), blur: poof * 14 });
+  m.style.transform += ' perspective(1200px) rotateY(12deg)';
+  const items = m.querySelectorAll('.item');
+  const hoverA = prog(t, 13.85, 13.95) * (1 - poof);
+  items[0].querySelector('.hover').style.opacity = hoverA.toFixed(3);
+  // Cursor travels to "1080p" and is about to click when the menu disappears.
+  const c = el('cursor');
+  const cp = E.io3(prog(t, 13.1, 13.9));
+  const press = t > T.click && t < T.click + 0.18 ? 0.85 : 1;
+  place(c, { x: lerp(700, 330, cp), y: lerp(900, 370, cp), s: press, o: prog(t, 13.0, 13.2) * (1 - prog(t, T.poof, T.poof + 0.2)) });
+  const centre = -200 * E.io3(prog(t, T.poof + 0.05, T.poof + 0.8));
+  const hOut = { x: centre, y: -out * 30, o: 1 - out };
+  place(el('s4h'), hOut);
+  reveal(el('s4h'), t, T.menu + 0.3, { stagger: 0.07 });
+  el('chips').style.transform = `translateX(${centre.toFixed(2)}px)`;
+  [...el('chips').children].forEach((chip, i) => {
+    const t0 = T.chipTimes[i];
+    const p = spring(t - t0, 260, 16);
+    place(chip, { y: (1 - p) * 40 - out * 30, s: lerp(0.8, 1, p), o: clamp((t - t0) / 0.15) * (1 - out) });
+  });
+  place(el('s4p'), hOut);
+  reveal(el('s4p'), t, T.install, { stagger: 0.07 });
+}
+
+function renderScene5(t) {
+  const on = t >= T.feed - 0.1 && t < T.adapt;
+  show(S.s5, on);
+  if (!on) return;
+  const out = exitOf(t, T.out5, 0.4);
+  reveal(el('s5h'), t, T.feed, { stagger: 0.07 });
+  reveal(el('s5p'), t, T.feed + 0.45, { stagger: 0.035, dur: 0.5 });
+  place(el('s5h'), { y: -out * 30, o: 1 - out });
+  place(el('s5p'), { y: -out * 30, o: 1 - out });
+  const logIn = E.out4(prog(t, T.feed + 0.35, T.feed + 0.85));
+  place(el('log'), { y: (1 - logIn) * 40 - out * 30, o: logIn * (1 - out) });
+  logRows.forEach((row, i) => {
+    const t0 = i === 0 ? T.feed + 0.7 : FEED[i].fix;
+    const p = spring(t - t0, 240, 18);
+    place(row, { x: (1 - p) * -40, o: clamp((t - t0) / 0.15) });
+  });
+}
+
+function renderScene6(t) {
+  const on = t >= T.adapt - 0.05 && t < T.manners;
+  show(S.s6, on);
+  if (!on) return;
+  const out = exitOf(t, T.out6, 0.35);
+  reveal(el('s6h'), t, T.adapt, { stagger: 0.08 });
+  reveal(el('s6p'), t, T.adapt + 0.3, { stagger: 0.03, dur: 0.5 });
+  place(el('s6h'), { y: -out * 30, o: 1 - out });
+  place(el('s6p'), { y: -out * 30, o: 1 - out });
+  const cardIn = E.out4(prog(t, T.adapt + 0.2, T.adapt + 0.7));
+  place(el('chart'), { y: (1 - cardIn) * 50 - out * 30, o: cardIn * (1 - out) });
+  const s = clamp((t - CHART.startT) * CHART.rate, 0, CHART.endS);
+  const x = cx(s);
+  el('revealRect').setAttribute('width', t >= CHART.startT ? x.toFixed(1) : '0');
+  const q = s < CHART.dropS ? 1080 : s < CHART.upS ? 720 : 1080;
+  // The dot follows the smoothed step.
+  const qy = s < CHART.dropS ? CH.q[1080] : s < CHART.upS ? CH.q[720] : CH.q[1080];
+  const vis = t >= CHART.startT ? 1 : 0;
+  ['headDot', 'headHalo', 'bufDot', 'playhead'].forEach(id => el(id).style.opacity = vis);
+  el('headDot').setAttribute('cx', x); el('headDot').setAttribute('cy', qy);
+  el('headDot').setAttribute('fill', q === 1080 ? '#5ce1ff' : '#ffd166');
+  const halo = (t * 1.6) % 1;
+  el('headHalo').setAttribute('cx', x); el('headHalo').setAttribute('cy', qy);
+  el('headHalo').setAttribute('r', (14 + halo * 22).toFixed(1));
+  el('headHalo').setAttribute('stroke', q === 1080 ? '#5ce1ff' : '#ffd166');
+  el('headHalo').style.opacity = (vis * (1 - halo)).toFixed(3);
+  el('bufDot').setAttribute('cx', x); el('bufDot').setAttribute('cy', cyB(sampleBuffer(s)).toFixed(1));
+  el('playhead').setAttribute('x1', x); el('playhead').setAttribute('x2', x);
+  // Wi-Fi strength
+  const bars = s < CHART.weakS ? 3 : s < CHART.betterS ? 1 : s < CHART.strongS ? 2 : 3;
+  const wifi = el('wifiIcon');
+  if (wifi.dataset.bars !== String(bars)) { wifi.innerHTML = wifiSvg(bars); wifi.dataset.bars = bars; }
+  setText(el('wifiLabel'), bars === 3 ? 'Wi-Fi: strong' : bars === 2 ? 'Wi-Fi: recovering' : 'Wi-Fi: weak');
+  el('wifiLabel').style.color = bars === 1 ? '#ff9a8a' : bars === 2 ? '#ffd166' : '#bcbbe8';
+  // Annotations pop in as the playhead reaches them.
+  // Annotations pop in as the playhead reaches them; `ax` anchors each pill horizontally (0 left, 0.5 centre).
+  const pin = (id, atS, px, py, ax = 0) => {
+    const t0 = CHART.timeOf(atS), p = spring(t - t0, 280, 16);
+    const e = el(id);
+    e.style.left = `${px - e.offsetWidth * ax}px`; e.style.top = `${py}px`;
+    e.style.transformOrigin = `${ax * 100}% 100%`;
+    place(e, { s: lerp(0.6, 1, p), y: (1 - p) * 12, o: clamp((t - t0) / 0.12) });
+  };
+  pin('stall1', CHART.stalls[0], cx(CHART.stalls[0]), CH.q[1080] - 76, 0.5);
+  pin('stall2', CHART.stalls[1], cx(CHART.stalls[1]), CH.q[1080] - 76, 0.5);
+  CHART.stalls.forEach((st, i) => { el(`stallMark${i + 1}`).style.opacity = clamp((t - CHART.timeOf(st)) / 0.1).toFixed(3); });
+  pin('dropNote', CHART.dropS, cx(CHART.dropS) + 26, CH.q[720] + 24);
+  pin('bracketNote', CHART.upS - 0.5, (cx(24) + cx(54)) / 2, CH.bTop - 84, 0.5);
+  pin('upNote', CHART.upS, cx(CHART.upS) + 26, CH.q[1080] + 22);
+  const br = el('bracket');
+  const bp = E.io2(prog(t, CHART.timeOf(24), CHART.timeOf(54)));
+  br.style.strokeDasharray = '2000';
+  br.style.strokeDashoffset = (2000 - bp * (cx(54) - cx(24) + 28)).toFixed(1);
+  br.style.opacity = t >= CHART.timeOf(24) ? 1 : 0;
+  el('stall1').querySelector('svg').style.transform = `rotate(${(t * 540) % 360}deg)`;
+  el('stall2').querySelector('svg').style.transform = `rotate(${(t * 540) % 360}deg)`;
+  const fn = E.out3(prog(t, CHART.timeOf(CHART.upS) + 0.5, CHART.timeOf(CHART.upS) + 1));
+  place(el('footnote'), { y: (1 - fn) * 12, o: fn });
+}
+
+function renderScene7(t) {
+  const on = t >= T.manners - 0.05 && t < T.cta;
+  show(S.s7, on);
+  if (!on) return;
+  const out = exitOf(t, T.out7, 0.4);
+  reveal(el('s7h'), t, T.manners, { stagger: 0.08 });
+  place(el('s7h'), { y: -out * 30, o: 1 - out });
+  ['c1', 'c2', 'c3'].forEach((id, i) => {
+    const t0 = T.cards[i];
+    const p = spring(t - t0, 170, 16);
+    place(el(id), { y: (1 - p) * 70 - out * 30, s: lerp(0.94, 1, p), o: clamp((t - t0) / 0.2) * (1 - out) });
+  });
+  const mp = E.out4(prog(t, T.manifest, T.manifest + 0.5));
+  place(el('manifest'), { y: (1 - mp) * 30 - out * 30, o: mp * (1 - out) });
+}
+
+function renderScene8(t) {
+  const on = t >= T.cta - 0.05;
+  show(S.s8, on);
+  if (!on) return;
+  reveal(el('s8h'), t, T.ctaWord, { stagger: 0.09, dur: 0.7 });
+  reveal(el('s8p'), t, T.tagline, { stagger: 0.08 });
+  [['pill1', T.pills[0]], ['pill2', T.pills[1]]].forEach(([id, t0]) => {
+    const p = spring(t - t0, 200, 17);
+    place(el(id), { y: (1 - p) * 30, o: clamp((t - t0) / 0.2) });
+  });
+  el('fade').style.opacity = E.io2(prog(t, T.end - 1.1, T.end - 0.1)).toFixed(3);
+}
+
+function renderFx(t, wiz) {
+  fx.clearRect(0, 0, 1920, 1080);
+  fx.globalCompositeOperation = 'source-over';
+  if (wiz) {
+    const at = pt => ({ x: wiz.x + (pt.x - 0.5) * wiz.size, y: wiz.y + (pt.y - 0.5) * wiz.size });
+    if (t < T.title) {
+      burst(fx, t, T.wizard, { x: wiz.x, y: wiz.y, n: 36, seed: 5, speed: [700, 1500], drag: 3.4, life: [0.7, 1.4] });
+      // Glint on the sunglasses.
+      const g = prog(t, T.glint, T.glint + 0.45), g2 = prog(t, T.glint + 0.12, T.glint + 0.5);
+      if (g > 0 && g < 1) { const lens = at(LENS); sparkle(fx, lens.x, lens.y, 22 * Math.sin(g * Math.PI), g * 1.5, COLORS.white, 1); }
+      if (g2 > 0 && g2 < 1) { const lens = at(LENS2); sparkle(fx, lens.x, lens.y, 13 * Math.sin(g2 * Math.PI), g2 * 1.5, COLORS.white, 0.9); }
+      const tv = at(TV_SCREEN);
+      if (t < T.impact + 0.8) beam(fx, t, T.beam, T.impact, tv, PLAYER_CENTER);
+    }
+    if (t >= T.title && t < T.menu) twinkles(fx, t, { x: wiz.x, y: wiz.y, n: 9, r0: 150, r1: 230, t0: T.title, seed: 9, alpha: prog(t, T.title, T.title + 0.5) * (1 - prog(t, T.out3, T.out3 + 0.3)) });
+    if (t >= T.cta) {
+      burst(fx, t, T.cta, { x: wiz.x, y: wiz.y, n: 44, seed: 17, speed: [700, 1600], drag: 3.2, life: [0.8, 1.6] });
+      twinkles(fx, t, { x: wiz.x, y: wiz.y, n: 12, r0: 205, r1: 270, t0: T.cta, seed: 19, orbit: 0.25, squash: 0.9, alpha: prog(t, T.cta + 0.4, T.cta + 1) * (1 - prog(t, T.end - 1.1, T.end - 0.2)) });
+    }
+  }
+  ring(fx, t, T.impact, PLAYER_CENTER.x, PLAYER_CENTER.y, { r1: 520, dur: 0.6 });
+  ring(fx, t, T.impact + 0.08, PLAYER_CENTER.x, PLAYER_CENTER.y, { r1: 380, dur: 0.5, col: COLORS.cyan, width: 8 });
+  burst(fx, t, T.impact, { x: PLAYER_CENTER.x, y: PLAYER_CENTER.y, n: 40, seed: 23, speed: [300, 1000], w: 300, h: 500, life: [0.5, 1.1] });
+  // Sparkle around the sticker whenever a Short is corrected.
+  for (const s of FEED.slice(1)) {
+    const px = PLAYER_CENTER.x + 250, py = 92 + 10;
+    burst(fx, t, s.fix, { x: px, y: py, n: 14, seed: 31 + s.fix * 10, speed: [120, 380], size: [5, 12], life: [0.4, 0.8] });
+  }
+  // Menu dissolves into sparkles.
+  burst(fx, t, T.poof, { x: 395, y: 540, w: 420, h: 560, n: 60, seed: 41, speed: [60, 300], drag: 2, life: [0.5, 1.2], spread: 0.15, gravity: -120 });
+  // Upgrade sparkle on the chart.
+  const upX = 160 + cx(CHART.upS), upY = 336 + CH.q[1080];
+  burst(fx, t, CHART.upT, { x: upX, y: upY, n: 20, seed: 51, speed: [150, 420], size: [6, 13], life: [0.5, 1] });
+  // Final sparkle as the tagline lands.
+  burst(fx, t, T.tagline, { x: 1180, y: 740, n: 16, seed: 61, speed: [120, 360], size: [6, 12], life: [0.5, 1], colors: [COLORS.cyan, COLORS.white] });
+}
+
+async function render(t) {
+  t = clamp(t, 0, DURATION);
+  drawBackground(t);
+  renderScene1(t);
+  const visiblePlayer = renderPlayer(t);
+  if (visiblePlayer) await drawPlayer(t);
+  renderScene2(t);
+  renderScene3(t);
+  renderScene4(t);
+  renderScene5(t);
+  renderScene6(t);
+  renderScene7(t);
+  renderScene8(t);
+  const wiz = renderWizard(t);
+  renderFx(t, wiz);
+}
+
+function measureTitle() {
+  // Lock up the wizard with the wordmark, centered as a group.
+  const wm = el('wordmark'), sub = el('s3p');
+  show(S.s3, true);
+  const ww = Math.max(wm.offsetWidth, sub.offsetWidth);
+  const size = 250, gap = 50;
+  const left = (1920 - (size + gap + ww)) / 2;
+  const wmH = wm.offsetHeight;
+  TITLE = { size, wx: left + size / 2, wy: 520, textX: left + size + gap, textY: 520 - wmH / 2 - 44, subY: 520 + wmH / 2 - 26 };
+  show(S.s3, false);
+}
+
+// ---------------------------------------------------------------------------
+// Boot: capture mode is driven by render.mjs; otherwise this is a scrubbable preview.
+// ---------------------------------------------------------------------------
+const capture = new URLSearchParams(location.search).has('capture');
+window.__ready = (async () => {
+  const faces = ['800 100px "Bricolage Grotesque"', '700 40px "Bricolage Grotesque"', '500 40px Inter', '600 40px Inter', '700 40px Inter', '500 40px "JetBrains Mono"', '600 40px "JetBrains Mono"', '700 40px "JetBrains Mono"', '800 40px "JetBrains Mono"', '700 58px Caveat'];
+  await Promise.all(faces.map(f => document.fonts.load(f)));
+  await document.fonts.ready;
+  const missing = faces.filter(f => !document.fonts.check(f));
+  if (missing.length) throw new Error(`Fonts failed to load: ${missing.join(', ')}`);
+  await el('wizardImg').decode();
+  measureTitle();
+  await render(0);
+  return { duration: DURATION, fps: FPS };
+})();
+window.__seek = t => render(t);
+
+if (!capture) {
+  const stage = el('stage');
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, (innerHeight - 70) / 1080);
+    stage.style.transform = `scale(${s})`;
+    stage.style.left = `${(innerWidth - 1920 * s) / 2}px`;
+    stage.style.top = `${Math.max(0, (innerHeight - 70 - 1080 * s) / 2)}px`;
+  };
+  addEventListener('resize', fit);
+  fit();
+  const controls = el('controls'), scrub = el('scrub'), time = el('time'), play = el('play');
+  controls.hidden = false;
+  const audio = new Audio('out/soundtrack.wav');
+  audio.preload = 'auto';
+  let playing = false, t0 = 0, wall0 = 0, busy = false, current = Number(new URLSearchParams(location.search).get('t') || 0);
+  const draw = async t => {
+    if (busy) return;
+    busy = true;
+    current = t;
+    scrub.value = t;
+    time.textContent = `${t.toFixed(2)} s`;
+    await render(t);
+    busy = false;
+  };
+  const loop = now => {
+    if (!playing) return;
+    const t = t0 + (now - wall0) / 1000;
+    if (t >= DURATION) { playing = false; play.textContent = 'Play'; audio.pause(); draw(DURATION); return; }
+    draw(t);
+    requestAnimationFrame(loop);
+  };
+  const toggle = () => {
+    playing = !playing;
+    play.textContent = playing ? 'Pause' : 'Play';
+    if (playing) {
+      if (current >= DURATION) current = 0;
+      t0 = current; wall0 = performance.now();
+      if (el('sound').checked) { audio.currentTime = current; audio.play().catch(() => {}); }
+      requestAnimationFrame(loop);
+    } else audio.pause();
+  };
+  play.addEventListener('click', toggle);
+  scrub.addEventListener('input', () => { if (playing) toggle(); draw(Number(scrub.value)); });
+  addEventListener('keydown', e => {
+    if (e.key === ' ') { e.preventDefault(); toggle(); }
+    if (e.key === 'ArrowRight') draw(Math.min(DURATION, current + (e.shiftKey ? 1 : 1 / FPS)));
+    if (e.key === 'ArrowLeft') draw(Math.max(0, current - (e.shiftKey ? 1 : 1 / FPS)));
+  });
+  window.__ready.then(() => draw(current));
+}
+</script>
+</body>
+</html>
