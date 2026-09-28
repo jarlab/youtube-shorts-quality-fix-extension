@@ -4,7 +4,7 @@ Status: v1 implementation baseline. The user authorized building in this reposit
 
 ## Objective
 
-Automatically prefer 1080p on YouTube without a button, while allowing lower quality when playback cannot sustain HD. Recover toward 1080p when conditions improve.
+Automatically prefer 1080p on YouTube Shorts without a button, while allowing lower quality when playback cannot sustain HD. Recover toward 1080p when conditions improve.
 
 The motivating issue was reproduced on desktop Chrome: a Short played at 240×426 despite a reported connection speed of approximately 45 Mbps and a 36-second buffer. Selecting 1080p in the regular player and reloading the Short restored 1080×1920 playback. The reason YouTube's Auto mode selected 240p remains unknown.
 
@@ -15,11 +15,11 @@ Confirmed requirements:
 - Runs automatically; no per-video action.
 - 1080p is the default preferred quality.
 - Adapts to connection conditions instead of forcing unusable HD playback.
+- Applies only to YouTube Shorts on `https://www.youtube.com/shorts/`. Regular watch pages are left to YouTube.
 
 Proposed v1 scope:
 
 - Desktop Chrome, using Manifest V3.
-- YouTube Shorts and regular watch pages on `https://www.youtube.com/`.
 - 1080p is the automatic ceiling. If unavailable, choose the highest available standard quality below it.
 - No popup, toolbar action, account, server, or settings screen. The browser's extension toggle provides the on/off control.
 - Network adaptation uses buffer health and actual playback interruptions. Direct Mbps estimation and external speed tests are deferred.
@@ -65,7 +65,7 @@ These values are product defaults to validate, not universal bandwidth threshold
 
 ## Technical approach and limits
 
-Use a small, dependency-free JavaScript content script, restricted to YouTube. It observes video changes and playback health, keeps temporary state in memory, and requests the target quality through the page's player.
+Use a small, dependency-free JavaScript content script, restricted to YouTube. It loads on every YouTube page because YouTube navigates in-page, and acts only while a Shorts URL is active. It observes video changes and playback health, keeps temporary state in memory, and requests the target quality through the page's player.
 
 YouTube's public iframe API does not support setting playback quality. Inspection of the current Shorts player exposed internal quality methods, including `setPlaybackQualityRange`, but their presence does not establish that automatic control works. The first implementation validation must prove that the current player accepts a quality change without navigation or reloading. Do not substitute a disruptive workaround if that fails; report the compatibility limitation and revisit this spec.
 
@@ -75,7 +75,7 @@ Proposed extension footprint: one manifest and one content script running in the
 
 1. **Automatic HD:** On a supported video with 1080p available and adequate connectivity, request 1080p within 2 seconds of quality choices becoming available. Verify HD delivery during active playback without a click.
 2. **Original regression:** The vLLM Short remains HD through the previously blurry section at approximately 2:17 on a healthy connection.
-3. **Navigation:** Moving to another Short or regular video reapplies the appropriate target without accumulating listeners or timers.
+3. **Navigation:** Moving to another Short reapplies the appropriate target without accumulating listeners or timers. Navigating to a regular video leaves its player untouched.
 4. **Unavailable HD:** A video limited to 720p stays at 720p without repeated failed requests for 1080p.
 5. **Network adaptation:** Repeated qualifying buffering lowers quality one step. Sustained recovery triggers an upgrade trial. Repeated failed trials obey the backoff.
 6. **No false downgrades:** Seeking, pausing, switching Shorts, backgrounding the tab, and reaching the end do not count as network failures.
@@ -114,13 +114,13 @@ No compilation or dependency installation is required. Load the source directory
 
 ## Testing and boundaries
 
-Use Node's built-in test runner for quality choice, interruption windows, seek/startup exclusions, fallback persistence, upgrade backoff, and bounded retries. Use a real Chrome session to verify Shorts, regular videos, manual override, quality changes, and playback preservation. Controlled network throttling belongs in an isolated test session. Synthetic policy tests alone are insufficient.
+Use Node's built-in test runner for quality choice, interruption windows, seek/startup exclusions, fallback persistence, upgrade backoff, and bounded retries. Use a real Chrome session to verify Shorts, that regular videos are left untouched, manual override, quality changes, and playback preservation. Controlled network throttling belongs in an isolated test session. Synthetic policy tests alone are insufficient.
 
 - Always: verify delivered quality, keep retries bounded, preserve playback, and report what was actually tested.
 - Discuss before expanding scope: additional permissions, dependencies, other browsers, a settings UI, or network-speed measurement.
 - Never: collect viewing history, send telemetry, inject remote code, interfere with ads or access restrictions, or install/publish the extension as part of specification work.
 
-The adaptive thresholds, coverage of regular videos, and manual-override behavior are proposed details for review. Reliable direct quality control remains the main technical question to validate during implementation.
+The adaptive thresholds and manual-override behavior are proposed details for review. Reliable direct quality control remains the main technical question to validate during implementation.
 
 ## References
 

@@ -193,10 +193,10 @@
 
     function readContext() {
       const url = new URL(page.location.href);
-      const shortId = url.pathname.match(/^\/shorts\/([\w-]+)\/?$/)?.[1];
-      const videoId = shortId || (url.pathname === '/watch' ? url.searchParams.get('v') : null);
+      // The script loads on all of YouTube to follow in-page navigation, but acts only on Shorts.
+      const videoId = url.pathname.match(/^\/shorts\/([\w-]+)\/?$/)?.[1];
       if (!videoId) return null;
-      const player = doc.getElementById(shortId ? 'shorts-player' : 'movie_player');
+      const player = doc.getElementById('shorts-player');
       if (!player || typeof player.getVideoData !== 'function') return null;
       const data = player.getVideoData();
       if (data?.video_id !== videoId || data.isLive || data.isLiveContent || data.isUpcoming) return null;

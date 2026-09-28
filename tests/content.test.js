@@ -221,9 +221,9 @@ function fakePage({ effective = true } = {}) {
         for (const callback of timers) callback();
       }
     },
-    navigate(id) {
+    navigate(id, path = `/shorts/${id}`) {
       videoId = id;
-      page.location.href = `https://www.youtube.com/shorts/${id}`;
+      page.location.href = `https://www.youtube.com${path}`;
       quality = 'small';
       video.videoWidth = 240;
       video.videoHeight = 426;
@@ -313,6 +313,22 @@ test('stale players belonging to another URL are left untouched', () => {
   install(f.page);
   f.tick(20);
   assert.deepEqual(f.calls, []);
+});
+
+test('regular watch pages are left untouched, including after navigating away from a Short', () => {
+  const direct = fakePage();
+  direct.page.location.href = 'https://www.youtube.com/watch?v=first';
+  install(direct.page);
+  direct.tick(20);
+  assert.deepEqual(direct.calls, []);
+
+  const f = fakePage();
+  const controller = install(f.page);
+  f.tick();
+  f.navigate('second', '/watch?v=second');
+  f.tick(20);
+  assert.deepEqual(f.calls, ['hd1080']);
+  assert.equal(controller.status().state, 'waiting');
 });
 
 test('backgrounding a stalled video resets the interruption rather than extending it on return', () => {
