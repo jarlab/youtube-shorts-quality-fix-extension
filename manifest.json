@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube Auto HD",
   "version": "0.1.0",
-  "description": "Automatically prefer 1080p on YouTube and lower quality when playback repeatedly buffers.",
+  "description": "Automatically prefer 1080p on YouTube Shorts and lower quality when playback repeatedly buffers.",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/icon-16.png",

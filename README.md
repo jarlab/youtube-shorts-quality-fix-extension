@@ -1,6 +1,6 @@
 # YouTube Auto HD
 
-A small Chrome extension that automatically prefers **1080p** on YouTube Shorts and regular videos. No button, popup, account, or build step.
+A small Chrome extension that automatically prefers **1080p** on YouTube Shorts. Regular videos are left to YouTube. No button, popup, account, or build step.
 
 ## Install locally
 
@@ -18,7 +18,7 @@ To update it after editing the source, click **Reload** on the extension's card 
 
 - Prefers standard 1080p; chooses the highest available lower resolution if HD is unavailable.
 - Works in the current player without opening tabs, reloading, seeking, changing playback speed, or changing audio settings.
-- Follows YouTube navigation, including scrolling between Shorts.
+- Acts only on Shorts (`/shorts/…`). It loads on every YouTube page so it can follow in-page navigation, including scrolling between Shorts, but sends no quality requests on regular `/watch` pages.
 - Drops one available quality level after two sustained buffering interruptions or one long interruption.
 - Tries a higher level after stable playback and a healthy buffer; backs off for 60 seconds after a failed upgrade.
 - Keeps a temporary lower target across videos in the same tab so it does not immediately undo its own fallback.
@@ -29,7 +29,7 @@ Network adaptation uses **actual playback and buffered video**, not a separate s
 
 ## Verify it
 
-Right-click a playing video and select **Stats for nerds**. Check **Current / Optimal Res**. For a portrait video, 1080p commonly reads `1080x1920`; for a landscape video, `1920x1080`.
+Right-click a playing video and select **Stats for nerds**. Check **Current / Optimal Res**. For a vertical Short, 1080p commonly reads `1080x1920`.
 
 The extension checks the decoded video dimensions as well as the player's quality label. It gives up after three unverified quality requests for a video instead of retrying indefinitely. A local console warning explains when YouTube's player controls could not be used.
 
@@ -37,7 +37,7 @@ The extension checks the decoded video dimensions as well as the player's qualit
 
 YouTube does not provide a supported public API for forcing quality. This extension uses the current website's internal `setPlaybackQualityRange` method. YouTube can change it, in which case the integration may need updating. Quality transitions can briefly buffer, especially on a weak connection.
 
-Only desktop Chrome, standard video qualities, and YouTube's main website are covered. No Premium-only options, live streams, embedded players, or other browsers are supported in v1. Adaptive thresholds are initial tuning values, not universal bandwidth guarantees.
+Only desktop Chrome, standard video qualities, and Shorts on YouTube's main website are covered. No regular videos, Premium-only options, live streams, embedded players, or other browsers are supported in v1. Adaptive thresholds are initial tuning values, not universal bandwidth guarantees.
 
 ## Privacy
 
